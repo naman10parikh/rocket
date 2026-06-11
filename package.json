@@ -1,0 +1,11 @@
+{
+  "name": "rocket",
+  "version": "0.1.0",
+  "private": true,
+  "description": "rocket — the Energy fleet's release-engineering employee (deploy + CI/CD). Private fleet repo; not published.",
+  "type": "module",
+  "scripts": {
+    "dsip:check": "node tools/dsip-check.mjs dsip.json",
+    "dsip:test": "node tools/dsip-check.test.mjs"
+  }
+}

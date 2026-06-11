@@ -1,0 +1,21 @@
+{
+  "dsip": "0.1",
+  "product": "dsip-check-fixture-l1",
+  "description": "A deliberately L1-conformant DSIP manifest fixture for tools/dsip-check.test.mjs.",
+  "levels": ["agent"],
+  "loop": {
+    "cadence": "nightly",
+    "runner": "deterministic",
+    "steps": ["refresh", "run-eval", "validate", "ship"]
+  },
+  "selection": "performance",
+  "eval": {
+    "rubric": "eval/ (L1 assertions + L2 behavior)",
+    "gate": "acceptance-test-green && no-regression",
+    "noSelfGrading": true
+  },
+  "snapback": {
+    "granularity": ["component", "repo"],
+    "vcs": "git"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "_comment": "FIXTURE: deployedSha is OLDER than headSha on purpose — prod is stale. rocket verify must return NO-GO/STALE, never GO. Do not reconcile these.",
+  "target": "https://stale-sha-fixture.example.test",
+  "headSha": "f00dcafe1234567890abcdef1234567890abcdef",
+  "deployedSha": "deadbeef0987654321fedcba0987654321fedcba",
+  "ci": "green",
+  "expectedDecision": "NO-GO",
+  "expectedReason": "deployed SHA (deadbeef…) != HEAD (f00dcafe…) — prod is stale; CI green lies (no deploy)"
+}

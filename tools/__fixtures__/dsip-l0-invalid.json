@@ -1,0 +1,11 @@
+{
+  "dsip": "0.1",
+  "product": "dsip-check-fixture-l0-invalid",
+  "description": "A deliberately L0-INVALID DSIP manifest: loop.cadence is prose (not a CADENCES enum), selection is not a SELECTIONS enum, and loop.steps is missing — so the vendored checker must grade it L0 INVALID and exit non-zero.",
+  "levels": ["agent"],
+  "loop": {
+    "cadence": "nightly (armed when the engine lands)",
+    "runner": "deterministic"
+  },
+  "selection": "eval-gated"
+}
