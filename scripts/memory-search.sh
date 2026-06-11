@@ -1,14 +1,16 @@
 #!/bin/bash
-# memory-search.sh — Search across Energy's memory system with relevance scoring
+# memory-search.sh — Search across rocket's expertise brain + memory system with relevance scoring
 # Usage: ./scripts/memory-search.sh "query" [--limit N] [--verbose]
 #
-# Searches: LEARNINGS.md, daily/*.md, topics/*.md, vault/*.md, rules/*.md
+# Searches: brain/*.md (the expertise layer — highest weight), LEARNINGS.md, daily/*.md,
+#           topics/*.md, vault/*.md, rules/*.md
 # Scoring: term frequency x recency x source weight
 # Returns: top N results (default 5) with file path + surrounding context
 
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+BRAIN_DIR="$PROJECT_DIR/brain"
 MEMORY_DIR="$PROJECT_DIR/memory"
 VAULT_DIR="$PROJECT_DIR/vault"
 RULES_DIR="$PROJECT_DIR/.claude/rules"
@@ -67,6 +69,7 @@ trap "rm -f $RESULTS_FILE" EXIT
 weight_for_source() {
   local file="$1"
   case "$file" in
+    */brain/*)           echo 6 ;;  # Expertise brain is the authoritative release-eng layer
     */.claude/rules/*)   echo 5 ;;  # Rules are highest priority
     */memory/LEARNINGS*) echo 4 ;;  # Learnings are core knowledge
     */memory/topics/*)   echo 4 ;;  # Topic files are curated
@@ -164,6 +167,12 @@ extract_context() {
 
 # Build file list to search
 FILES=()
+
+# Expertise brain (the authoritative release-eng layer — searched first, highest weight).
+# Scope = all on-disk brain/*.md (the six Wave-R artifacts + the forge-inherited org files).
+for f in "$BRAIN_DIR"/*.md; do
+  [ -f "$f" ] && FILES+=("$f")
+done
 
 # LEARNINGS.md
 [ -f "$MEMORY_DIR/LEARNINGS.md" ] && FILES+=("$MEMORY_DIR/LEARNINGS.md")
