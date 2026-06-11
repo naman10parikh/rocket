@@ -1,0 +1,42 @@
+{
+  "name": "rocket",
+  "version": "0.1.0",
+  "private": true,
+  "description": "rocket — release-engineering CLI for the Energy fleet (wire/audit/verify/rollback/eval-gate/migrate-plan/preview). Verify, don't trust the checkmark.",
+  "type": "module",
+  "bin": {
+    "rocket": "./dist/cli.js"
+  },
+  "main": "./dist/cli.js",
+  "types": "./dist/cli.d.ts",
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "ci-cd",
+    "deploy",
+    "release-engineering",
+    "github-actions",
+    "vercel",
+    "agent",
+    "energy"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "tsc && node --test \"test/**/*.test.ts\"",
+    "prepublishOnly": "echo 'parked: private fleet repo, do not publish (RQ7)' && exit 1"
+  },
+  "dependencies": {
+    "commander": "^15.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
