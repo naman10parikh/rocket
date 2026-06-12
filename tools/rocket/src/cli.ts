@@ -16,6 +16,7 @@ import { dirname, join } from "node:path";
 import { Command } from "commander";
 
 import { emit, errorResult } from "./output.js";
+import type { CommandResult } from "./output.js";
 import { runAudit } from "./commands/audit.js";
 import { runVerify } from "./commands/verify.js";
 import { runWire } from "./commands/wire.js";
@@ -24,6 +25,34 @@ import { runEvalGate } from "./commands/eval-gate.js";
 import { runMigratePlan } from "./commands/migrate-plan.js";
 import { runPreviewReap } from "./commands/preview.js";
 import { runDoctor } from "./commands/doctor.js";
+import { runRunsView } from "./commands/runs-view.js";
+import { logRun } from "./log-run.js";
+
+/**
+ * Append a deploy-decision line to logs/runs.jsonl for the state-mutating/gating verbs (verify/wire/
+ * rollback) — component 10 / E2. Reads the decision + evidence off the CommandResult so the cores stay
+ * pure (they return the result; the CLI owns the durable trail — the seam noted in each command). The
+ * `decision` is GO/NO-GO for verify, the wire outcome for wire, the method for rollback.
+ */
+function logDecision(command: string, result: CommandResult, startMs: number): void {
+  const d = result.data;
+  // pull a decision + evidence per verb; fall back to ok→GO/NO-GO so every line has a gradeable decision.
+  let decision: string;
+  if (command === "verify") decision = (d.decision as string) ?? (result.ok ? "GO" : "NO-GO");
+  else if (command === "rollback") {
+    const tiers = d.hierarchy as Array<{ method: string }> | undefined;
+    decision = tiers && tiers.length > 0 ? `rollback:${tiers[0].method}` : result.ok ? "GO" : "NO-GO";
+  } else decision = result.ok ? "GO" : "NO-GO"; // wire: GO when the workflow generated + actionlint-clean
+  logRun({
+    model: "deterministic",
+    durationMs: Date.now() - startMs,
+    command,
+    decision,
+    evidence: (d.evidence as string) ?? result.summary,
+    target: (d.target as string) ?? undefined,
+    toolCalls: [command],
+  });
+}
 
 /** Read the version from the package.json next to dist/ (works from dist/cli.js). */
 function readVersion(): string {
@@ -54,7 +83,10 @@ program
   .option("--dry-run", "print the ordered step plan with verify gates; no side effects")
   .option("--json", "machine-readable JSON output")
   .action((opts) => {
+    const start = Date.now();
     const r = runWire({ target: opts.target, lane: opts.lane, strategy: opts.strategy, dryRun: Boolean(opts.dryRun) });
+    // log the deploy decision (component 10 / E2) — but NOT a dry-run (it makes no decision, mutates nothing).
+    if (!opts.dryRun) logDecision("wire", r, start);
     process.exit(emit(r, Boolean(opts.json)));
   });
 
@@ -78,7 +110,9 @@ program
   .option("--deployed-sha <sha>", "the live deployed SHA override (else read from the fixture)")
   .option("--json", "machine-readable JSON output")
   .action((opts) => {
+    const start = Date.now();
     const r = runVerify({ target: opts.target, sha: opts.sha, deployedSha: opts.deployedSha });
+    logDecision("verify", r, start); // the prime-directive GO/NO-GO trail (component 10 / E2).
     process.exit(emit(r, Boolean(opts.json)));
   });
 
@@ -91,7 +125,9 @@ program
   .option("--lane <lane>", "deploy lane: vercel|fly|cloudflare|railway (default vercel)")
   .option("--json", "machine-readable JSON output")
   .action((opts) => {
+    const start = Date.now();
     const r = runRollback({ target: opts.target, to: opts.to, lane: opts.lane });
+    logDecision("rollback", r, start); // the rollback-method trail (component 10 / E2).
     process.exit(emit(r, Boolean(opts.json)));
   });
 
@@ -140,6 +176,16 @@ program
   .option("--json", "machine-readable JSON output")
   .action((opts) => {
     const r = runDoctor();
+    process.exit(emit(r, Boolean(opts.json)));
+  });
+
+// ── runs-view — summarize the append-only deploy-decision trail (read command → --json) ──
+program
+  .command("runs-view")
+  .description("summarize logs/runs.jsonl: GO/NO-GO counts, per-command breakdown, recent decisions (the audit trail, component 10)")
+  .option("--json", "machine-readable JSON output")
+  .action((opts) => {
+    const r = runRunsView();
     process.exit(emit(r, Boolean(opts.json)));
   });
 
