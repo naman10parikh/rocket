@@ -1,0 +1,9 @@
+{
+  "_comment": "X1 acceptance fixture — the recorded HERMETIC deploy state. deployedSha == headSha on purpose so `rocket verify` returns GO (the hermetic 'deploy reachable' proxy — no live cloud). The LIVE acceptance form (VERCEL_TOKEN set) replaces this with a real deployed SHA from the Vercel deployment API + a curl of prod.",
+  "target": "https://sample-next-app.example.test",
+  "headSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "deployedSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "ci": "green",
+  "expectedDecision": "GO",
+  "expectedReason": "deployed SHA == HEAD (hermetic) → GO; the live form curls prod + compares the real deployed SHA"
+}

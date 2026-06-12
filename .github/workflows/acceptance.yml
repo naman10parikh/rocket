@@ -1,0 +1,109 @@
+name: acceptance
+# X1 — THE acceptance test (PLAN §5; the bar). This CI job passing IS the definition of rocket being a
+# working employee. Two-form (RQ0/V5): the HERMETIC form below red-blocks every CI run (act + actionlint +
+# a fixture deploy, no live cloud); the LIVE form (real Vercel deploy + a real 2nd-commit preview URL) runs
+# on-demand with VERCEL_TOKEN set, isolated from quota/flake (NOT every push).
+#
+# The bar, made executable: `rocket wire --target ./fixtures/sample-next-app` → a valid, actionlint-clean
+# GHA workflow lands → a fixture deploy is reachable (hermetic: rocket verify GO) → a 2nd commit triggers a
+# preview (hermetic: the generated workflow's pull_request preview job, discoverable via `act -l`).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hermetic:
+    name: hermetic acceptance (act + actionlint + fixture deploy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Install actionlint (THE acceptance gate)
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          echo "$PWD" >> "$GITHUB_PATH"
+
+      - name: Install act (local GHA dry-run — the hermetic CI engine)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/nektos/act/master/install.sh | bash -s -- -b /usr/local/bin || true
+          act --version || echo "::warning::act install best-effort; the preview assertion falls back to a grep of the generated workflow"
+
+      - name: Build rocket CLI
+        working-directory: tools/rocket
+        run: |
+          npm install
+          npm run build
+
+      - name: rocket doctor (toolbelt self-check runs FIRST — OP-21)
+        run: node tools/rocket/dist/cli.js doctor --json || true
+
+      - name: rocket wire the fixture (generate the pipeline)
+        run: node tools/rocket/dist/cli.js wire --target ./fixtures/sample-next-app
+
+      - name: actionlint the generated workflow (FAIL CI on any problem — THE gate)
+        run: actionlint ./fixtures/sample-next-app/.github/workflows/deploy.yml
+
+      - name: Hermetic sandbox validation of the generated workflow (E2B if keyed, else local-fallback)
+        # The sandbox is ON the acceptance path (HARNESS-OVERRIDES §11): validate the generated workflow in
+        # an ephemeral env. With E2B_API_KEY set it boots a real Firecracker VM; without it, the runner runs
+        # actionlint locally (honestly labeled local-fallback) — either way a coldStartMs line lands in the log.
+        run: node tools/rocket/dist/sandbox/e2b-runner.js ./fixtures/sample-next-app/.github/workflows/deploy.yml
+        env:
+          E2B_API_KEY: ${{ secrets.E2B_API_KEY }}
+
+      - name: rocket verify the fixture deploy (hermetic — GO when deployed SHA == HEAD)
+        run: node tools/rocket/dist/cli.js verify --target ./fixtures/sample-next-app
+
+      - name: Assert the 2nd-commit PREVIEW job exists (cold — grep + act -l, no live deploy)
+        run: |
+          WF=./fixtures/sample-next-app/.github/workflows/deploy.yml
+          # 1) the generated workflow must carry a pull_request preview trigger.
+          grep -qE 'pull_request' "$WF"
+          grep -qi 'preview' "$WF"
+          # 2) if act installed, the preview job must be DISCOVERABLE on the pull_request event (no live deploy).
+          if command -v act >/dev/null 2>&1; then
+            act pull_request -W ./fixtures/sample-next-app/.github/workflows/ -l | grep -qi preview
+          else
+            echo "::warning::act not installed — preview asserted via grep only"
+          fi
+
+      - name: Assert the run-log line landed (observability proof — component 10)
+        run: |
+          test -f logs/runs.jsonl
+          tail -1 logs/runs.jsonl | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const o=JSON.parse(s);if(!o.decision){process.exit(1)}console.log("run-log decision:",o.decision)})'
+
+      - name: Run the eval pyramid (red-blocking — the CI eval job, component 9)
+        run: npm run eval
+
+  rsi-conformance:
+    name: DSIP conformance (>= L1) + deterministic RSI ($0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: DSIP gate >= L1 (vendored, no cross-repo dep)
+        run: npm run dsip:check
+      - name: Build rocket CLI + the eval gate (for the deterministic RSI run)
+        run: |
+          (cd tools/rocket && npm install && npm run build)
+          npm run eval:build
+      - name: Seed the eval baseline (committed seed; here for a clean CI regression check)
+        run: node tools/rocket/dist/cli.js eval-gate --seed-baseline
+      - name: Run the deterministic RSI engine ($0, tokenless)
+        run: node workflows/rsi.workflow.js

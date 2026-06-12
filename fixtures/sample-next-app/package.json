@@ -1,0 +1,16 @@
+{
+  "name": "sample-next-app",
+  "private": true,
+  "version": "0.0.0",
+  "description": "X1 acceptance-test fixture — a minimal, checked-in, deterministic Next.js app that `rocket wire` wires a pipeline into. Reviewable (RQ4): a generated fixture would add nondeterminism the gate must not have.",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "15.0.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  }
+}
