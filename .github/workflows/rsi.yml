@@ -1,20 +1,46 @@
 name: rocket RSI
-# CP123: dispatch-only until the RSI engine (workflows/rsi.workflow.js + eval gate) is built in Wave B/E.
-# The Claude half additionally needs CLAUDE_CODE_OAUTH_TOKEN (chairman checklist, D8). Guarded = always green.
+# CP123 cluster D2: the durable RSI schedule is ARMED — a nightly `schedule:` cron + `workflow_dispatch`.
+# The DETERMINISTIC half (workflows/rsi.workflow.js) runs $0/tokenless (D8): re-run actionlint/zizmor
+# self-audit on rocket's OWN workflows + re-run the L1/L2 golden tasks (regression vs the committed
+# eval/baseline.json) + diff the TOOL-MATRIX version claims + write a proposal to proposals/.
+# The CLAUDE half (brain-rewrites, new golden tasks, judge-tuning) stays DARK until the chairman sets
+# CLAUDE_CODE_OAUTH_TOKEN (D8 — CHAIRMAN-CHECKLIST). Until E5 lands workflows/rsi.workflow.js, the
+# engine-guard exits green (a no-op night), so the armed schedule never red-fails on a missing engine.
 on:
+  schedule:
+    # nightly at 07:00 UTC — the ecosystem-watch cadence (brain/TOOL-MATRIX.md §8).
+    - cron: "0 7 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: rocket-rsi
+  cancel-in-progress: false
+
 jobs:
   rsi:
+    name: deterministic RSI (tokenless, $0)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Engine guard
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Run the deterministic RSI engine (guarded — green no-op until E5 lands the engine)
         run: |
           if [ ! -f workflows/rsi.workflow.js ]; then
-            echo "RSI engine not built yet (CP123 cluster E) — exiting green."; exit 0
+            echo "::notice::RSI engine (workflows/rsi.workflow.js) not built yet (CP123 cluster E5) — armed schedule fired, engine absent → green no-op."
+            exit 0
           fi
-          echo "engine present — deterministic half would run here (wired in cluster E)"
+          echo "RSI engine present — running the deterministic half (\$0, tokenless)."
+          node workflows/rsi.workflow.js
+
+      - name: Note the deferred Claude half (D8)
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN == '' }}
+        run: echo "::notice::Claude RSI half is DARK — set CLAUDE_CODE_OAUTH_TOKEN (CHAIRMAN-CHECKLIST) to light brain-rewrites + new golden tasks + judge-tuning (D8)."
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

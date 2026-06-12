@@ -1,62 +1,37 @@
 /**
- * `rocket wire --target <repo>` — generate a valid, actionlint-clean GHA workflow + deploy config (B1).
+ * `rocket wire --target <repo>` — generate a valid, actionlint-clean GHA workflow + deploy config.
  *
- * This is THE acceptance test (PLAN §5). B1 owns the command SHAPE + the ordered step plan + `--dry-run`;
- * cluster D1 owns the full internal routing LOOP (detect→generate→validate→commit→verify with per-step
- * verify gates) and the real workflow generation. This file gives D1 a coherent seam: `--dry-run` prints
- * the ordered plan with its verify gates NOW (the D1/§3-component-8 verify line), and names what D1 wires.
+ * This is THE acceptance test (PLAN §5). The command SHAPE + the ordered step plan + `--dry-run` live here;
+ * the real internal routing LOOP (detect→generate→validate→commit→verify with per-step verify gates + the
+ * atomic workflow generation) lives in `../routing.ts` (D1). `--dry-run` prints the ordered plan with its
+ * verify gates (no side effects); a real run executes the loop and ABORTS at the first failed gate
+ * (validate fails → never commit, OP-21 TEST-BEFORE-BUILD).
  *
  * Default lane = Vercel when --lane omitted (RQ1), honoring energy's one-push-at-a-time house law.
  */
-import { statSync } from "node:fs";
-
 import type { CommandResult } from "../output.js";
 import { errorResult } from "../output.js";
+import { wirePlan, runWireLoop } from "../routing.js";
+import type { Lane, Strategy } from "../routing.js";
 
 export interface WireOptions {
   readonly target: string;
-  readonly lane?: "vercel" | "fly" | "cloudflare" | "railway";
-  readonly strategy?: "bluegreen" | "canary";
+  readonly lane?: Lane;
+  readonly strategy?: Strategy;
   readonly dryRun?: boolean;
-}
-
-/** One ordered step of the wire routing loop, each with the gate that proves it (D1 executes these). */
-interface WireStep {
-  readonly step: "detect" | "generate" | "validate" | "commit" | "verify";
-  readonly action: string;
-  readonly verify: string;
-}
-
-/** The ordered plan rocket wire executes. `--dry-run` prints exactly this (no side effects). */
-function plan(opts: WireOptions): WireStep[] {
-  const lane = opts.lane ?? "vercel";
-  const strategy = opts.strategy ?? "bluegreen";
-  return [
-    { step: "detect", action: `detect repo type + lane (default ${lane}); read package manager + framework`, verify: "lane resolved; framework detected" },
-    { step: "generate", action: `generate the GHA workflow + ${lane} deploy config; strategy=${strategy} (blue-green default — canary only with telemetry, HOUSE LAW 1)`, verify: "workflow file written to a temp path (atomic rename into .github/workflows/)" },
-    { step: "validate", action: "run actionlint on the generated workflow (THE acceptance gate) + zizmor security lint", verify: "actionlint exits 0 (0 problems) — else abort, do NOT commit" },
-    { step: "commit", action: "commit named files only (the workflow + config); ONE push at a time (HOUSE LAW 3 — Git integration only, never vercel --prod)", verify: "git shows the workflow committed; no rapid successive pushes" },
-    { step: "verify", action: "rocket verify --target <repo> — both axes (deployed SHA == HEAD + behavior smoke); a 2nd commit must trigger a preview", verify: "verify returns GO; preview job present on the 2nd-commit path; a GO/NO-GO line lands in logs/runs.jsonl" },
-  ];
 }
 
 /**
  * Run wire. In `--dry-run`, print the ordered step plan with verify gates (deterministic, no mutation).
- * Without --dry-run, B1 returns a coherent "routing loop owned by cluster D1" result naming the steps —
- * D1 deepens detect/generate/commit into real file writes + git. (Honest seam, not a fake done.)
+ * Without --dry-run, execute the real routing loop (detect→generate→validate, gated) via routing.ts.
  */
 export function runWire(opts: WireOptions): CommandResult {
-  try {
-    statSync(opts.target);
-  } catch {
-    return errorResult("wire", `target not found: ${opts.target} (point --target at a repo or fixture).`);
-  }
+  const lane: Lane = opts.lane ?? "vercel";
+  const strategy: Strategy = opts.strategy ?? "bluegreen";
 
-  const steps = plan(opts);
-  const lane = opts.lane ?? "vercel";
-  const strategy = opts.strategy ?? "bluegreen";
-
+  // dry-run prints the plan WITHOUT requiring the target to exist or writing anything (the D1 verify path).
   if (opts.dryRun) {
+    const steps = wirePlan({ lane, strategy });
     return {
       command: "wire",
       ok: true,
@@ -65,16 +40,29 @@ export function runWire(opts: WireOptions): CommandResult {
     };
   }
 
+  // Real run: the routing loop owns detect/generate/validate with per-step gates (aborts on a failed gate).
+  const loop = runWireLoop({ target: opts.target, lane, strategy, dryRun: false });
+  if (!loop.ok && loop.steps.length === 1 && loop.steps[0]?.step === "detect" && !loop.steps[0]?.ok) {
+    // gate-0 (target missing/not-a-dir) → a clean error result, not a crash.
+    return errorResult("wire", `${loop.steps[0]?.detail} (point --target at a repo or fixture directory).`);
+  }
+
+  const lastFailed = loop.steps.find((s) => !s.ok);
+  const summary = loop.ok
+    ? `wired ${opts.target} (lane=${lane}, strategy=${strategy}) — workflow generated + actionlint-clean; commit + verify are READY (ordered: detect → generate → validate → commit → verify).`
+    : `wire ABORTED at "${lastFailed?.step}" gate for ${opts.target}: ${lastFailed?.detail}`;
+
   return {
     command: "wire",
-    ok: true,
-    summary: `wire routing loop for ${opts.target} (lane=${lane}); execution of detect→generate→commit is cluster D1's routing engine. Run with --dry-run to see the ordered plan + verify gates.`,
+    ok: loop.ok,
+    summary,
     data: {
       target: opts.target,
       lane,
       strategy,
-      steps,
-      note: "B1 owns the command shape + the ordered plan; cluster D1 (routing.ts) executes detect/generate/validate/commit/verify with the per-step gates above. The atomic-write (temp + rename) is asserted by E4's chaos test.",
+      steps: loop.steps,
+      workflowPath: loop.workflowPath ?? null,
+      configPath: loop.configPath ?? null,
     },
   };
 }
