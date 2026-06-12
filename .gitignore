@@ -16,6 +16,7 @@ packages/web/.next/
 .claude/worktrees/
 .claude/backups/
 .claude/scheduled_tasks.lock
+.claude/house-laws.context.md
 .claude/vp-signals/*.done
 .claude/vp-signals/*.needs-qa
 .claude/vp-signals/*.migrating
