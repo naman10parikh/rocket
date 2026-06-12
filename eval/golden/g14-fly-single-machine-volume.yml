@@ -1,0 +1,14 @@
+# Golden task G14 — Fly single-Machine + volume (Scenario 9): a Fly plan with 1 Machine + a volume →
+# rocket must flag data-loss-on-host-failure and require >1 Machine + replication + snapshot < RPO.
+# No pure deterministic core in B2 for a Fly config; the gradeable deterministic tell is that rocket's
+# reflex (KNOWN-PITFALLS P22) encodes all three guards. L2 (knowledge: the brain encodes the answer).
+id: G14
+scenario: Fly single-Machine + volume data-loss guard
+level: L2
+tier: ci
+command: knowledge
+source: brain/KNOWN-PITFALLS.md
+expect_match:
+  - "1 Machine"
+  - replication
+  - snapshot cadence < RPO

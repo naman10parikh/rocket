@@ -1,0 +1,23 @@
+# Golden task G8 — Pending-forever required check (Scenario 10: paths: filter on a REQUIRED status check)
+# A `paths:`-filtered workflow listed as a required check → it sits Pending forever when the path doesn't
+# change (un-mergeable PR, no failure to fix). rocket detects the trap and the audit verb emits the
+# always-runs-reports-success-on-skip rewrite. Deterministic L1 (paths-check core, confirmed-required → P0).
+id: G8
+scenario: paths-as-required-check Pending-forever trap
+level: L1
+tier: ci
+command: audit
+required_checks:
+  - ci
+workflow: |
+  name: ci
+  on:
+    pull_request:
+      paths:
+        - "src/**"
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - run: echo build
+expect_paths_severity: P0

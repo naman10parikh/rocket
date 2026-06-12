@@ -1,0 +1,22 @@
+{
+  "_comment": "L3 LLM-judge config (E1c). noSelfGrading is the load-bearing property: the judge model/config is INDEPENDENT of the agent-under-test (a self-grading judge = the theater rocket's brain condemns, P29). The canonical noSelfGrading:true flag lives in dsip.json (the DSIP contract); this config wires the judge to the L3 golden task(s) + its rubric. The Claude half is DEFERRED (D8) — the judge lights when CLAUDE_CODE_OAUTH_TOKEN is set; the deterministic eval (L1/L2) runs at $0 without it.",
+  "noSelfGrading": true,
+  "judgeModel": "fable-5[1m]",
+  "agentUnderTestModel": "opus-4.8[1m]",
+  "calibration": {
+    "set": "eval/judge/calibration-set.md",
+    "size": "50-100 hand-labeled rows (RQ11) — seeded; expand from production failures (the gate is the evolving dataset, HOUSE LAW 2)",
+    "agreementMetric": "Cohen's kappa >= 0.6 vs the human labels"
+  },
+  "scorerMix": "60% deterministic / 30% LLM-judge / 10% human",
+  "tasks": [
+    {
+      "id": "G15",
+      "fixture": "eval/golden/g15-surgical-migration.yml",
+      "rubric": "eval/judge/g15-rubric.md",
+      "level": "L3",
+      "cadence": "PR + nightly",
+      "deferred": "Claude half (D8) — set CLAUDE_CODE_OAUTH_TOKEN to score"
+    }
+  ]
+}

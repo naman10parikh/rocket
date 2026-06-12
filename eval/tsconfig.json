@@ -1,0 +1,21 @@
+{
+  "//": "Compiles eval/gate.ts → eval/dist/gate.js (E1d). Separate from tools/rocket's tsconfig so the gate ships as a standalone, node-runnable ESM module (the repo root is type:module). Zero-dep.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": ".",
+    "declaration": false,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmitOnError": true,
+    "types": ["node"],
+    "typeRoots": ["../tools/rocket/node_modules/@types"]
+  },
+  "include": ["gate.ts"],
+  "exclude": ["dist", "node_modules"]
+}

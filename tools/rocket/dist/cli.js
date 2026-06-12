@@ -129,11 +129,12 @@ program
     .command("eval-gate")
     .description("gate agent/prompt changes on regression vs a rolling baseline + an absolute floor (dual threshold); noSelfGrading")
     .option("--baseline <ref>", "the rolling-baseline ref/file (default eval/baseline.json)")
+    .option("--candidate <file>", "an explicit candidate scores file (else re-run the golden tasks live)")
     .option("--floor <n>", "absolute floor (default 0.8)", (v) => Number(v))
     .option("--seed-baseline", "run the deterministic golden tasks once and write the committed baseline (E1d)")
     .option("--json", "machine-readable JSON output")
     .action((opts) => {
-    const r = runEvalGate({ baseline: opts.baseline, floor: opts.floor, seedBaseline: Boolean(opts.seedBaseline) });
+    const r = runEvalGate({ baseline: opts.baseline, candidate: opts.candidate, floor: opts.floor, seedBaseline: Boolean(opts.seedBaseline) });
     process.exit(emit(r, Boolean(opts.json)));
 });
 // ── migrate-plan — expand-contract plan + refusal (PLAN-ONLY, RQ10) ──

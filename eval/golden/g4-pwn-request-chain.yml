@@ -1,0 +1,28 @@
+# Golden task G4 — The 3-link chain (Scenario 4: TanStack pull_request_target + shared cache)
+# A workflow with `pull_request_target` + checkout-of-head = the pwn-request RCE class (P3). The
+# deterministic gradeable part here: rocket's audit must flag the path/trigger hazard (a pull_request_target
+# with a path filter present surfaces as a hazard). The full multi-finding + cache-purge runbook is the L3
+# runbook-quality part (graded by the judge); this L2 part asserts the deterministic hazard is caught.
+id: G4
+scenario: TanStack pwn-request + shared cache (3-link chain)
+level: L2
+tier: ci
+command: audit
+workflow: |
+  name: pr-build
+  on:
+    pull_request_target:
+      paths:
+        - "src/**"
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+          with:
+            ref: ${{ github.event.pull_request.head.sha }}
+        - uses: actions/cache@v4
+        - run: pnpm install && pnpm build
+expect_unpinned: 2
+expect_paths_severity: P1
+expect_not_all_pinned: "true"

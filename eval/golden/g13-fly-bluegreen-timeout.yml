@@ -1,0 +1,14 @@
+# Golden task G13 — Fly bluegreen timeout (Scenario 13): bluegreen times out, machines never healthy on a
+# trivial change → rocket names BOTH root-cause candidates (platform incident vs shared-CPU startup) and
+# falls back to rolling + a raised grace_period. Diagnosis-class; rocket's reflex (KNOWN-PITFALLS P20) must
+# encode both candidates + the rolling fallback. Nightly L2 (knowledge).
+id: G13
+scenario: Fly bluegreen timeout (both root-cause candidates + rolling fallback)
+level: L2
+tier: nightly
+command: knowledge
+source: brain/KNOWN-PITFALLS.md
+expect_match:
+  - regional incident
+  - shared-CPU
+  - rolling

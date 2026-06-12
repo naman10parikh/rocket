@@ -1,0 +1,14 @@
+# Golden task G10 — Monorepo under-deploy (Scenario 12): a shared schema consumed by two non-import-graph
+# services → rocket must NOT report "only producer affected"; it surfaces the implicit-dependency miss and
+# requires the consumers rebuilt. Diagnosis-class; rocket's reflex (KNOWN-PITFALLS P26 / OPINIONS OP-16)
+# must encode the implicit-dep miss + declare-implicit-deps. Nightly L2 (knowledge).
+id: G10
+scenario: monorepo under-deploy (implicit-dependency miss)
+level: L2
+tier: nightly
+command: knowledge
+source: brain/KNOWN-PITFALLS.md
+expect_match:
+  - implicit depend
+  - stale consumers
+  - declare implicit dependencies explicitly

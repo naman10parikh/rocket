@@ -1,0 +1,7 @@
+{
+  "_comment": "E1d fixture: a candidate scores map that MATCHES the seeded baseline (all golden tasks pass). The dual-threshold gate must PASS this (floor cleared AND no regression).",
+  "scores": {
+    "G1": 1.0, "G2": 1.0, "G3": 1.0, "G4": 1.0, "G5": 1.0,
+    "G6": 1.0, "G8": 1.0, "G9": 1.0, "G12": 1.0, "G14": 1.0
+  }
+}

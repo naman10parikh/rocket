@@ -1,0 +1,21 @@
+# Golden task G2 — Transitive-pin gap (Scenario 2: reviewdog → tj-actions)
+# A workflow whose top action is SHA-pinned but the file ALSO contains a mutable-tag action → rocket must
+# NOT report "all pinned ✓"; it must surface the gap. Deterministic L2 (the honesty rule: pinned-but-not-all).
+# (A real transitive audit needs the action's own tree; the gradeable deterministic tell here is that the
+#  file is NOT all-pinned, so rocket must refuse the comforting "all safe" lie — DISPUTE 1 / P2.)
+id: G2
+scenario: reviewdog transitive gap (must not report all-pinned)
+level: L2
+tier: ci
+command: audit
+workflow: |
+  name: lint
+  on: { pull_request: {} }
+  jobs:
+    review:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        - uses: reviewdog/action-eslint@v1
+expect_unpinned: 1
+expect_not_all_pinned: "true"

@@ -1,0 +1,14 @@
+# Golden task G11 — Vercel bot-email no-op (Scenario 14): "bot pushed, Vercel didn't deploy, no error" →
+# rocket checks commit-author-email vs verified Vercel emails + the public-repo-config-auth path BEFORE
+# blaming Git integration. Diagnosis-class; rocket's reflex (KNOWN-PITFALLS P13 + P14) must encode the two
+# agent-specific reasons. Nightly L2 (knowledge).
+id: G11
+scenario: Vercel bot-email silent no-op (two agent-specific reasons)
+level: L2
+tier: nightly
+command: knowledge
+source: brain/KNOWN-PITFALLS.md
+expect_match:
+  - commit author email
+  - verified Vercel account email
+  - public repo

@@ -1,0 +1,14 @@
+# Golden task G12 — Config-drift green deploy (Scenario 15): a green deploy where a config default flipped
+# prod behavior → rocket must catch it via BEHAVIOR smoke (real path + config-default check), not a 200-OK.
+# rocket's verify reflex (the deploy-verify skill) must encode "behavior, not just 200" + the config-default
+# check — otherwise a 200 on a config-drifted build lies. Deterministic L2 (knowledge: the skill encodes it).
+id: G12
+scenario: config-drift green deploy (behavior smoke, not 200)
+level: L2
+tier: ci
+command: knowledge
+source: skills/deploy-verify/SKILL.md
+expect_match:
+  - behavior smoke
+  - config default
+  - not just .?200

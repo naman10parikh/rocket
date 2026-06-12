@@ -1,0 +1,14 @@
+# Golden task G7 — ARC dropped-webhook (Scenario 7): a job "Waiting for a runner" with NO listener log line
+# → rocket diagnoses a DROPPED webhook (not "still scaling"), recommends a queued-too-long alarm. Diagnosis-
+# class (no deterministic core); rocket's reflex (KNOWN-PITFALLS P9) must encode the no-log-line signature +
+# the alarm. Nightly L2 (knowledge).
+id: G7
+scenario: ARC dropped-webhook (no listener log line)
+level: L2
+tier: nightly
+command: knowledge
+source: brain/KNOWN-PITFALLS.md
+expect_match:
+  - no.{0,12}listener log
+  - "Waiting for a runner"
+  - queued

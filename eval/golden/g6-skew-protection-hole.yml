@@ -1,0 +1,16 @@
+# Golden task G6 — Skew-Protection hole (Scenario 6: Astro #15964, inter-chunk import bypass)
+# A code-split frontend with Skew Protection ON → rocket must NOT assert "skew can't bite"; it identifies
+# the inter-chunk-import bypass and recommends a ChunkLoadError handler. The deterministic gradeable tell:
+# verify with an UNKNOWN deployed SHA (skew means you cannot be sure the loaded artifact == HEAD) → NO-GO,
+# never GO (RQ5). The "name the inter-chunk hole" narrative is in the deploy-verify skill + L3; this L2 part
+# asserts the verify reflex does NOT infer safety from a toggle.
+id: G6
+scenario: Astro skew-protection inter-chunk hole (no safety from a toggle)
+level: L2
+tier: ci
+command: verify
+head_sha: abc1230000000000000000000000000000000000
+deployed_sha: "null"
+ci: green
+expect_decision: NO-GO
+expect_reason_match: cannot|verify-don't-assume

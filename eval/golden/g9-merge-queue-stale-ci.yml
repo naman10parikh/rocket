@@ -1,0 +1,15 @@
+# Golden task G9 — Merge-queue stale CI (Scenario 11: a green check whose head_sha != HEAD post-force-push)
+# A queued PR whose green check is bound to an ANCESTOR commit (head_sha != current HEAD) → rocket reports
+# "CI did not run on current code", does not trust the green. Deterministic L1 (sha-compare: the check's
+# head_sha is the "deployed/tested" SHA; compare to HEAD → stale-green NO-GO).
+id: G9
+scenario: merge-queue green check bound to a stale head_sha
+level: L1
+tier: ci
+command: verify
+head_sha: 1111111111111111111111111111111111111111
+deployed_sha: 2222222222222222222222222222222222222222
+ci: green
+expect_decision: NO-GO
+expect_stale: "true"
+expect_reason_match: STALE|merge-queue|head_sha

@@ -6,6 +6,10 @@
   "type": "module",
   "scripts": {
     "dsip:check": "node tools/dsip-check.mjs dsip.json",
-    "dsip:test": "node tools/dsip-check.test.mjs"
+    "dsip:test": "node tools/dsip-check.test.mjs",
+    "eval": "node eval/run.mjs",
+    "eval:nightly": "node eval/run.mjs --nightly",
+    "eval:all": "node eval/run.mjs --all",
+    "eval:build": "tsc -p eval/tsconfig.json"
   }
 }

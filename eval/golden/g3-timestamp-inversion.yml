@@ -1,0 +1,12 @@
+# Golden task G3 — Timestamp-inversion (Scenario 3: Trivy → LiteLLM, "impossible commit timestamps")
+# A tag whose commit timestamp predates its parent's = the force-push/repoint tell. rocket must detect it
+# and refuse to trust the tag. Deterministic L1 (timestamp core).
+id: G3
+scenario: Trivy force-push tell (timestamp inversion)
+level: L1
+tier: ci
+command: timestamp
+sha: deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+committed_ms: 1000
+parent_committed_ms: 5000
+expect_inverted: "true"

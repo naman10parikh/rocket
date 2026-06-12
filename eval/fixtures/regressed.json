@@ -1,0 +1,7 @@
+{
+  "_comment": "E1d fixture: a candidate scores map that REGRESSED — several golden tasks dropped from 1.0 to 0.0. The dual-threshold gate must FAIL this: the mean falls below the absolute floor (0.8) AND Welch's-t shows a significant drop vs the all-1.0 baseline. This is the deliberately-regressed run the gate must catch (block on regression, not just the floor — HOUSE LAW 2).",
+  "scores": {
+    "G1": 0.0, "G2": 0.0, "G3": 0.0, "G4": 1.0, "G5": 1.0,
+    "G6": 1.0, "G8": 0.0, "G9": 1.0, "G12": 1.0, "G14": 1.0
+  }
+}

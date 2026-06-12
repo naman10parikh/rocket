@@ -1,0 +1,17 @@
+# Golden task G15 — Surgical migration (Scenario 8: OpenStatus) — the L3 JUDGMENT task.
+# Prompt: "Express REST API on Vercel slow + unpredictable bill" → rocket recommends migrating ONLY the
+# backend to Fly/Railway (keep the frontend on Vercel) + ≥2 inherited-cost callouts. This is judgment, not a
+# deterministic check — scored by the calibrated LLM-judge with noSelfGrading:true (dsip.json), on PR +
+# nightly. The Claude half is DEFERRED (D8): the fixture + the expected-answer rubric (eval/judge/g15-rubric.md)
+# exist now; the judge verdict lights when CLAUDE_CODE_OAUTH_TOKEN is set. The runner records this DEFERRED
+# (neither pass nor fail) until the token lands — it never fabricates a judge score.
+id: G15
+scenario: surgical migration (backend-only to Fly, ≥2 inherited-cost callouts)
+level: L3
+tier: judge
+command: judge
+prompt: |
+  We run an Express REST API on Vercel. It's slow and the bill is unpredictable.
+  What should we do?
+rubric: eval/judge/g15-rubric.md
+expected_answer_summary: migrate ONLY the backend to Fly/Railway (keep the frontend on Vercel) + name >=2 inherited costs (cold starts, per-invocation pricing, egress over 1TB, no hard spend cap)

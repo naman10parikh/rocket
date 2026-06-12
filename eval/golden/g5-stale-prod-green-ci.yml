@@ -1,0 +1,15 @@
+# Golden task G5 — Stale prod, green CI (Scenario 5: energy's 8-day silent stoppage) — THE canonical
+# verify-don't-trust eval. The deployed SHA != HEAD while CI is GREEN → rocket reports STALE/NO-GO, curls/
+# compares the SHA, and names a catalog cause (hook / verified-commits / cancelled-on-Hobby / merge-queue).
+# It must NOT trust the checkmark. Deterministic L2 (sha-compare core).
+id: G5
+scenario: energy 8-day stale prod, green CI (verify-don't-trust)
+level: L2
+tier: ci
+command: verify
+head_sha: f00dcafe1234567890abcdef1234567890abcdef
+deployed_sha: deadbeef0987654321fedcba0987654321fedcba
+ci: green
+expect_decision: NO-GO
+expect_stale: "true"
+expect_reason_match: STALE|hook|verified-commits|Hobby|merge-queue
