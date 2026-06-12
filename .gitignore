@@ -24,5 +24,8 @@ packages/web/.next/
 # Obsidian temp files
 vault/Untitled*.base
 
+# RSI generated proposals (runtime artifacts, regenerated nightly — the dir + .gitkeep are tracked)
+proposals/*.md
+
 .env
 .env.*
