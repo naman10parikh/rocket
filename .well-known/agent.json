@@ -1,0 +1,73 @@
+{
+  "protocolVersion": "1.0",
+  "name": "rocket",
+  "description": "The Energy fleet's Deploy + CI/CD (release engineering) domain-expert employee. Wires actionlint-clean GitHub Actions CI/CD into any repo, audits a workflow for the 2026 supply-chain attack classes (mutable-tag / transitive-pin / pwn-request / cache-poison / OIDC-misconfig), verifies a deploy along both axes (right artifact live AND live artifact behaves), executes the rollback hierarchy fastest-first, gates agent releases on regression-not-floor, and plans expand-contract migrations so rollback stays possible. Verify, don't trust the checkmark. Owns the pipeline and the deploy only; product features go to pixel/turbo/pebble. Powered by Energy.",
+  "version": "0.1.0",
+  "provider": {
+    "organization": "Energy",
+    "url": "https://github.com/naman10parikh/rocket"
+  },
+  "documentationUrl": "https://github.com/naman10parikh/rocket/blob/main/AGENTS.md",
+  "endpoint": "stdio:node tools/rocket/dist/mcp-server.js",
+  "transports": [
+    { "type": "mcp", "command": "node", "args": ["tools/rocket/dist/mcp-server.js"], "transport": "stdio", "note": "the rocket MCP server (rocket-mcp) — default transport, 7 tools mirroring the CLI 1:1" },
+    { "type": "http", "url": "http://localhost:7799", "note": "documented dual-mode: the local cockpit (stdlib server + SPA); a hosted-OAuth Streamable-HTTP MCP variant is deferred to packaging" }
+  ],
+  "capabilities": ["wire", "audit", "verify", "rollback", "eval-gate", "migrate-plan", "preview-reap"],
+  "defaultInputModes": ["text/plain", "application/json"],
+  "defaultOutputModes": ["text/plain", "application/json"],
+  "skills": [
+    {
+      "id": "wire",
+      "name": "Wire CI/CD into a repo",
+      "description": "THE acceptance test: generate a valid, actionlint-clean GitHub Actions workflow + deploy config for a repo (detect -> generate -> validate -> commit -> verify, per-step gates) and commit it, with a 2nd-commit preview. Default lane = Vercel. Maps to `rocket wire`.",
+      "tags": ["ci-cd", "github-actions", "deploy", "vercel", "codegen"],
+      "examples": [
+        "Wire CI/CD into this Next.js repo.",
+        "Set up a GitHub Actions deploy pipeline for ./my-app with a preview on every PR."
+      ]
+    },
+    {
+      "id": "audit",
+      "name": "Audit a workflow for supply-chain attack classes",
+      "description": "Run the attack-class sweep (mutable-tag / pwn-request / cache-poison / OIDC-misconfig) + actionlint + zizmor over a repo's workflows; emit P0/P1 findings + SHA-pin fixes. Never reports 'all pinned' from a top-level scan (surfaces the transitive gap). Maps to `rocket audit`.",
+      "tags": ["ci-cd", "security", "supply-chain", "actionlint", "audit"],
+      "examples": ["Audit this workflow for the 2026 GHA attack classes.", "Is this CI safe? SHA-pin what isn't pinned."]
+    },
+    {
+      "id": "verify",
+      "name": "Verify a deploy is real and behaves",
+      "description": "Both-axes deploy check: (a) deployed SHA == HEAD (curl + compare), (b) behavior smoke (real user path + config defaults, not just 200). Emit GO/NO-GO. Refuses to read a checkmark; NO-GO under uncertainty, never GO. Maps to `rocket verify`.",
+      "tags": ["deploy", "verification", "smoke-test", "go-no-go"],
+      "examples": ["Did this deploy actually go live? Verify it.", "Is prod serving HEAD and behaving, or is it stale?"]
+    },
+    {
+      "id": "rollback",
+      "name": "Roll back a bad deploy fastest-first",
+      "description": "Execute the rollback hierarchy fastest-first (feature-flag kill switch -> alias re-point -> image-pin -> git-revert); print the prior-good deployment ID captured at deploy. Knows Fly has no one-command rollback (image-pin). Maps to `rocket rollback`.",
+      "tags": ["deploy", "rollback", "incident", "kill-switch"],
+      "examples": ["Roll back the last deploy as fast as possible.", "We got popped — what's the rollback runbook?"]
+    },
+    {
+      "id": "eval-gate",
+      "name": "Gate an agent release on eval regression",
+      "description": "Run the eval pyramid on agent/prompt changes and gate on REGRESSION vs a rolling baseline + an absolute floor (dual threshold, Welch's-t) — not an absolute floor alone. noSelfGrading (judge independent of the agent under test). Maps to `rocket eval-gate`.",
+      "tags": ["evals", "ci-gate", "regression", "agent-release"],
+      "examples": ["Gate my agent change on eval regression, not a frozen floor.", "Set up an eval gate in CI for this prompt change."]
+    },
+    {
+      "id": "migrate-plan",
+      "name": "Plan a rollback-able schema migration",
+      "description": "Classify a schema diff and emit the expand-contract 3-phase plan (additive within one deploy; drop in a separate later deploy >=24-72h after stable); REFUSE a destructive change in the same deploy as dependent code (un-rollback-able by construction). PLAN-ONLY — acorn owns the schema. Maps to `rocket migrate-plan`.",
+      "tags": ["migration", "schema", "expand-contract", "rollback-safety"],
+      "examples": ["Plan a safe migration for this drop-column diff.", "Is this schema change rollback-able within one deploy?"]
+    },
+    {
+      "id": "preview-reap",
+      "name": "Reap leaked preview environments",
+      "description": "Tear down leaked preview environments (the reaper the platform won't run); lists orphans first. Maps to `rocket preview reap`.",
+      "tags": ["preview", "cleanup", "cost", "ephemeral-envs"],
+      "examples": ["Reap preview environments older than 7 days for this repo.", "List and tear down leaked preview DB branches."]
+    }
+  ]
+}

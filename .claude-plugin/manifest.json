@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0",
+  "name": "rocket",
+  "display_name": "rocket — Deploy + CI/CD (Release Engineering)",
+  "description": "The Energy fleet's release-engineering employee. Wires actionlint-clean GitHub Actions CI/CD into any repo, audits a workflow for the 2026 supply-chain attack classes (mutable-tag / transitive-pin / pwn-request / cache-poison / OIDC-misconfig), verifies a deploy along both axes (right artifact live AND live artifact behaves), executes the rollback hierarchy fastest-first, and gates agent releases on regression-not-floor. Verify, don't trust the checkmark. Owns the pipeline and the deploy only; product features go to pixel/turbo/pebble.",
+  "version": "0.1.0",
+  "author": "Energy Platform",
+  "license": "MIT",
+  "repository": "https://github.com/naman10parikh/rocket",
+  "keywords": ["claude-code", "ci-cd", "deploy", "release-engineering", "github-actions", "vercel", "actionlint", "rollback", "eval-gate", "harness", "energy"],
+  "mcp_servers": [
+    {
+      "name": "rocket",
+      "description": "rocket's own release-engineering tools over JSON-RPC (stdio) — rocket_wire / rocket_audit / rocket_verify / rocket_rollback / rocket_eval_gate / rocket_migrate_plan / rocket_preview_reap. Thin wrappers over the SAME core functions the rocket CLI calls (one implementation, two surfaces — the MCP tools never drift from the gated CLI). Long-running calls (verify, eval_gate) carry the MCP Tasks-primitive promotion seam (call-now/fetch-later, 2025-11-25 spec).",
+      "transport": "stdio",
+      "command": "node",
+      "args": ["tools/rocket/dist/mcp-server.js"],
+      "env": {}
+    }
+  ],
+  "cli": {
+    "binary": "rocket",
+    "entrypoint": "./tools/rocket/dist/cli.js",
+    "commands": [
+      { "name": "wire", "description": "THE acceptance test: generate a valid, actionlint-clean GHA workflow + deploy config for a repo (detect -> generate -> validate -> commit -> verify, per-step gates); commit it. Default lane = Vercel.", "usage": "rocket wire --target <repo> [--lane vercel|fly|cloudflare|railway] [--strategy bluegreen|canary] [--dry-run] [--json]" },
+      { "name": "audit", "description": "run the J3 attack-class sweep (mutable-tag / pwn-request / cache-poison / OIDC-misconfig) + actionlint + zizmor; emit P0/P1 findings + SHA-pin fixes. Never reports 'all pinned' from a top-level scan (transitive gap).", "usage": "rocket audit <path-to-.github/workflows | repo> [--json]" },
+      { "name": "verify", "description": "both-axes deploy check: (a) deployed SHA == HEAD (curl + compare), (b) behavior smoke (real path + config defaults, not just 200). Emit GO/NO-GO. Refuses to read a checkmark; NO-GO under uncertainty, never GO.", "usage": "rocket verify --target <repo|url> [--sha <expected>] [--json]" },
+      { "name": "rollback", "description": "execute the rollback hierarchy fastest-first (flag -> alias-repoint -> image-pin -> git-revert); print the prior-good ID captured at deploy. (Fly has no one-command rollback — image-pin.)", "usage": "rocket rollback --target <repo> [--to <deployment-id|image>] [--json]" },
+      { "name": "eval-gate", "description": "run the eval pyramid on agent/prompt changes; gate on REGRESSION vs a rolling baseline + absolute floor (dual threshold, Welch's-t); noSelfGrading. --seed-baseline writes the committed eval/baseline.json.", "usage": "rocket eval-gate --baseline <ref> [--floor <n>] [--seed-baseline] [--json]" },
+      { "name": "migrate-plan", "description": "classify a schema diff; emit the expand-contract 3-phase plan; REFUSE a destructive change in the same deploy as dependent code (un-rollback-able by construction). PLAN-ONLY — acorn owns the schema.", "usage": "rocket migrate-plan --diff <schema-diff> [--json]" },
+      { "name": "preview", "description": "tear down leaked preview environments (the reaper the platform won't run); list orphans first.", "usage": "rocket preview reap --repo <repo> [--older-than <d>] [--json]" },
+      { "name": "doctor", "description": "self-check: act/actionlint/zizmor/gh installed, secrets present (tier), brain searchable, eval pyramid green.", "usage": "rocket doctor [--json]" }
+    ]
+  },
+  "capabilities": {
+    "tools": [
+      { "name": "rocket_wire", "description": "THE acceptance test over MCP: generate an actionlint-clean GHA workflow + deploy config for a repo and commit it. Maps to `rocket wire`.", "when_to_use": "When you want CI/CD wired into a repo — a valid GitHub Actions workflow plus a deploy config, with a 2nd-commit preview." },
+      { "name": "rocket_audit", "description": "Run the attack-class sweep + actionlint + zizmor over a repo's workflows; findings keyed by severity (P0/P1) with SHA-pin fixes. Maps to `rocket audit`.", "when_to_use": "When you need to know whether a CI workflow is safe — mutable-tag, transitive-pin, pwn-request, cache-poison, or OIDC misconfig — before shipping." },
+      { "name": "rocket_verify", "description": "Both-axes deploy check (deployed SHA == HEAD + behavior smoke); emits GO/NO-GO; refuses to read a checkmark. Maps to `rocket verify`.", "when_to_use": "When you want to know if a deploy actually went live AND behaves — not whether CI is green." },
+      { "name": "rocket_rollback", "description": "Execute the rollback hierarchy fastest-first (flag -> alias-repoint -> image-pin -> git-revert). Maps to `rocket rollback`.", "when_to_use": "When a deploy is bad and you want the fastest safe rollback path for the target's platform." },
+      { "name": "rocket_eval_gate", "description": "Run the eval pyramid and gate on regression vs a rolling baseline + absolute floor (dual threshold, Welch's-t); noSelfGrading. Maps to `rocket eval-gate`.", "when_to_use": "When you want to gate an agent/prompt change on quality regression, not an absolute floor that lets slow drift slip under it." },
+      { "name": "rocket_migrate_plan", "description": "Classify a schema diff and emit the expand-contract 3-phase plan; refuses a destructive change coupled with dependent code. Maps to `rocket migrate-plan`.", "when_to_use": "When you have a schema change and want a rollback-able migration ordering (expand/contract) before deploying." },
+      { "name": "rocket_preview_reap", "description": "Tear down leaked preview environments (lists orphans first). Maps to `rocket preview reap`.", "when_to_use": "When preview environments are accumulating beyond open PRs and need the teardown reaper the platform won't run." }
+    ]
+  },
+  "skills": [
+    "skills/deploy-verify/SKILL.md",
+    "skills/workflow-audit/SKILL.md",
+    "skills/rollback-runbook/SKILL.md",
+    "skills/migration-safety/SKILL.md",
+    "skills/eval-gate-design/SKILL.md"
+  ],
+  "subAgents": [
+    ".claude/agents/pipeline-auditor.md",
+    ".claude/agents/deploy-verifier.md"
+  ],
+  "hooks": [
+    ".claude/hooks/house-law-guard.sh",
+    ".claude/hooks/inject-house-laws.sh"
+  ],
+  "settings": ".claude/settings.json",
+  "brain": "brain/MOC - rocket.md",
+  "install_instructions": "1. Build the package: pnpm install && pnpm --filter rocket build (or: cd tools/rocket && pnpm install && pnpm build).\n2. Add this plugin to Claude Code: Settings -> Plugins -> Add local plugin -> select this directory (or `claude plugin install rocket`).\n3. The rocket CLI (wire/audit/verify/rollback/eval-gate/migrate-plan/preview/doctor), the rocket MCP server (7 tools), the 5 skills (deploy-verify, workflow-audit, rollback-runbook, migration-safety, eval-gate-design), the house-law guard + SessionStart hooks, and the 2 sub-agent personas (pipeline-auditor + deploy-verifier) are now available."
+}
