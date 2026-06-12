@@ -10,6 +10,6 @@
     "eval": "node eval/run.mjs",
     "eval:nightly": "node eval/run.mjs --nightly",
     "eval:all": "node eval/run.mjs --all",
-    "eval:build": "tsc -p eval/tsconfig.json"
+    "eval:build": "node tools/rocket/node_modules/typescript/bin/tsc -p eval/tsconfig.json"
   }
 }
