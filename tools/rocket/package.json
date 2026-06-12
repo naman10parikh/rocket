@@ -5,7 +5,8 @@
   "description": "rocket — release-engineering CLI for the Energy fleet (wire/audit/verify/rollback/eval-gate/migrate-plan/preview). Verify, don't trust the checkmark.",
   "type": "module",
   "bin": {
-    "rocket": "./dist/cli.js"
+    "rocket": "./dist/cli.js",
+    "rocket-mcp": "./dist/mcp-server.js"
   },
   "main": "./dist/cli.js",
   "types": "./dist/cli.d.ts",
