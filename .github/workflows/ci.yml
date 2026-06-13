@@ -61,3 +61,44 @@ jobs:
       - name: Skeleton phase
         if: steps.rt.outputs.armed == 'false'
         run: echo "skeleton phase — build gate auto-arms when package.json lands (CP123 Wave B)"
+
+  cockpit:
+    # Wave-T: the cockpit's two test layers, RED-BLOCKING (PLAN §9 "Component" + "E2E (Playwright)";
+    # HARNESS-OVERRIDES §9 "Playwright (cockpit) red-blocking in CI"). The component test exercises the
+    # read-only JSON API in isolation; the E2E renders the vanilla-JS SPA in a real headless browser and
+    # asserts all four views. Both fail the job on any failure. Screenshots upload as evidence artifacts.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: tools/rocket/pnpm-lock.yaml
+      - name: Build the CLI (the cockpit's /api/evals runs eval/run.mjs → imports tools/rocket/dist/)
+        run: |
+          cd tools/rocket
+          pnpm install --frozen-lockfile || pnpm install
+          pnpm build
+      - name: Seed the on-disk data the views render (a run-log line + the golden-task grid)
+        run: |
+          node tools/rocket/dist/cli.js verify --target ./fixtures/stale-sha-fixture || true
+          npm run eval
+      - name: Cockpit COMPONENT tests (the read-only JSON API in isolation — red-blocking)
+        run: node --test web/test/cockpit-api.test.mjs
+      - name: Install Playwright + chromium (ephemeral — NOT a repo dep; the repo stays zero-dep)
+        run: |
+          npm i -g playwright@1.58.2
+          npx --yes playwright@1.58.2 install --with-deps chromium
+      - name: Cockpit E2E (real headless browser renders all four views — red-blocking)
+        run: SHOTS_DIR="$RUNNER_TEMP/cockpit-shots" node web/test/cockpit-e2e.mjs
+      - name: Upload cockpit screenshots (evidence — Cluster G "Playwright E2E screenshots in Wave T")
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cockpit-screenshots
+          path: ${{ runner.temp }}/cockpit-shots/
+          if-no-files-found: ignore

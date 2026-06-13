@@ -10,6 +10,8 @@
     "eval": "node eval/run.mjs",
     "eval:nightly": "node eval/run.mjs --nightly",
     "eval:all": "node eval/run.mjs --all",
-    "eval:build": "node tools/rocket/node_modules/typescript/bin/tsc -p eval/tsconfig.json"
+    "eval:build": "node tools/rocket/node_modules/typescript/bin/tsc -p eval/tsconfig.json",
+    "test:cockpit": "node --test web/test/cockpit-api.test.mjs",
+    "test:cockpit:e2e": "node web/test/cockpit-e2e.mjs"
   }
 }
