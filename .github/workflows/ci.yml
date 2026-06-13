@@ -46,6 +46,11 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: tools/rocket/pnpm-lock.yaml
+      - name: Install actionlint (the wire integration test gates on it — same as acceptance.yml)
+        if: steps.rt.outputs.armed == 'true'
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          echo "$PWD" >> "$GITHUB_PATH"
       - name: Install + build + test (red-blocking once code exists)
         if: steps.rt.outputs.armed == 'true'
         run: |
