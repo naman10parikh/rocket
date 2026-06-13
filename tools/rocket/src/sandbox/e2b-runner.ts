@@ -25,6 +25,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 
+import { loadDotenv } from "../load-env.js";
 import { logRun } from "../log-run.js";
 
 /** The result of a hermetic sandbox validation run. */
@@ -143,6 +144,10 @@ export function runSandboxValidation(workflowPath: string): SandboxRunResult {
 // ── CLI (run directly) ────────────────────────────────────────────────────────
 const invokedDirectly = process.argv[1] && process.argv[1].endsWith("e2b-runner.js");
 if (invokedDirectly) {
+  // Standalone path (the acceptance workflow invokes this directly) — load `.env` so E2B_API_KEY is found
+  // cold without an exported var, so the hermetic sandbox actually boots E2B instead of local-fallback
+  // (T-user/CP123-B fix). Gaps-only; never prints a value (D7).
+  loadDotenv();
   const args = process.argv.slice(2);
   const asJson = args.includes("--json");
   const workflow = args.find((a) => !a.startsWith("--"));

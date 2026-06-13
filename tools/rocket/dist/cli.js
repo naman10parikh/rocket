@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { Command } from "commander";
+import { loadDotenv } from "./load-env.js";
 import { emit, errorResult } from "./output.js";
 import { runAudit } from "./commands/audit.js";
 import { runVerify } from "./commands/verify.js";
@@ -64,6 +65,11 @@ function readVersion() {
         return "0.0.0";
     }
 }
+// Load the repo's gitignored `.env` into process.env (gaps only — a real exported var wins) so a fresh
+// user gets E2B_API_KEY / ANTHROPIC_API_KEY / GH_TOKEN cold, matching the repo's "secrets from .env"
+// contract. Without this, `doctor` falsely reported keys missing and the E2B sandbox silently fell to
+// local-fallback despite the key being present (T-user/CP123-B fix). Never prints a value (D7).
+loadDotenv();
 const program = new Command();
 program
     .name("rocket")
