@@ -45,9 +45,11 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: tools/rocket/pnpm-lock.yaml
       - name: Install + build + test (red-blocking once code exists)
         if: steps.rt.outputs.armed == 'true'
         run: |
+          cd tools/rocket
           pnpm install --frozen-lockfile || pnpm install
           pnpm build
           pnpm test
