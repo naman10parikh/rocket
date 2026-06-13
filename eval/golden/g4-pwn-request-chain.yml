@@ -1,8 +1,11 @@
 # Golden task G4 — The 3-link chain (Scenario 4: TanStack pull_request_target + shared cache)
 # A workflow with `pull_request_target` + checkout-of-head = the pwn-request RCE class (P3). The
-# deterministic gradeable part here: rocket's audit must flag the path/trigger hazard (a pull_request_target
-# with a path filter present surfaces as a hazard). The full multi-finding + cache-purge runbook is the L3
-# runbook-quality part (graded by the judge); this L2 part asserts the deterministic hazard is caught.
+# deterministic gradeable part: rocket's audit must (a) flag the path/trigger hazard AND (b) detect the
+# pwn-request RCE itself — `pull_request_target` + a checkout of the PR head is a P0 (the brain's "one grep
+# catches the most common RCE class", P3). The full multi-finding + cache-purge runbook is the L3
+# runbook-quality part (graded by the judge); this L2 part asserts BOTH deterministic hazards are caught.
+# (T-user/CP123-B: before the fix, audit detected the unpinned refs + paths filter but NOT the pwn-request
+# RCE — G4's prose claimed it but its assertions didn't test it. expect_pwn_severity now closes that gap.)
 id: G4
 scenario: TanStack pwn-request + shared cache (3-link chain)
 level: L2
@@ -26,3 +29,4 @@ workflow: |
 expect_unpinned: 2
 expect_paths_severity: P1
 expect_not_all_pinned: "true"
+expect_pwn_severity: P0

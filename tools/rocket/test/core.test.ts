@@ -8,11 +8,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { refLint, isShaPinned } from "../dist/core/ref-lint.js";
+import { refLint, isShaPinned, isFirstParty } from "../dist/core/ref-lint.js";
 import { checkTimestampInversion } from "../dist/core/timestamp.js";
 import { compareSha } from "../dist/core/sha-compare.js";
 import { checkPathsAsRequired } from "../dist/core/paths-check.js";
 import { classifyMigration } from "../dist/core/expand-contract.js";
+import { detectPwnRequest } from "../dist/core/pwn-request.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // #1 ref-lint — non-SHA `uses:` is the mutable-tag class P0 (G1)
@@ -204,4 +205,59 @@ test("expand-contract: empty diff → no changes, no refusal", () => {
   assert.equal(r.changes.length, 0);
   assert.equal(r.refusal, null);
   assert.match(r.reason, /no schema changes/i);
+});
+
+// ── ref-lint first-party classification (T-user/CP123-B precision fix) ─────────
+test("ref-lint: first-party actions/* and github/* are classified firstParty", () => {
+  const wf = "jobs:\n  x:\n    steps:\n      - uses: actions/checkout@v4\n      - uses: github/codeql-action@v3\n      - uses: tj-actions/changed-files@v44\n";
+  const refs = refLint(wf);
+  const byAction = Object.fromEntries(refs.refs.map((r) => [r.action, r.firstParty]));
+  assert.equal(byAction["actions/checkout"], true, "actions/* is first-party");
+  assert.equal(byAction["github/codeql-action"], true, "github/* is first-party");
+  assert.equal(byAction["tj-actions/changed-files"], false, "tj-actions is THIRD-party (the real attack surface)");
+  // all three are still unpinned (detection unchanged — only the classification is additive)
+  assert.equal(refs.unpinned.length, 3, "first-party classification does not change the unpinned set");
+  assert.equal(refs.allPinned, false);
+});
+
+test("ref-lint: isFirstParty matches only GitHub-owned orgs (case-insensitive)", () => {
+  assert.equal(isFirstParty("actions/checkout"), true);
+  assert.equal(isFirstParty("Actions/Checkout"), true);
+  assert.equal(isFirstParty("github/codeql-action"), true);
+  assert.equal(isFirstParty("tj-actions/changed-files"), false);
+  assert.equal(isFirstParty("step-security/harden-runner"), false);
+});
+
+// ── pwn-request detection (T-user/CP123-B fix — the gap a fresh user found) ────
+test("pwn-request: pull_request_target + checkout-of-head → P0 RCE", () => {
+  const wf =
+    "name: pr\non:\n  pull_request_target:\n    branches: [main]\njobs:\n  build:\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}\n      - run: npm install\n";
+  const findings = detectPwnRequest(wf);
+  assert.equal(findings.length, 1, "one dangerous trigger present");
+  assert.equal(findings[0].trigger, "pull_request_target");
+  assert.equal(findings[0].severity, "P0", "head-checkout under the dangerous trigger = live RCE = P0");
+  assert.notEqual(findings[0].headRef, null, "the head-checkout tell is captured");
+  assert.match(findings[0].reason, /RCE|attacker/i);
+});
+
+test("pwn-request: pull_request_target WITHOUT a head-checkout → P1 dangerous context", () => {
+  const wf = "name: pr\non:\n  pull_request_target:\n    branches: [main]\njobs:\n  build:\n    steps:\n      - uses: actions/checkout@v4\n      - run: echo safe\n";
+  const findings = detectPwnRequest(wf);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].severity, "P1", "secrets-exposed context but no head-checkout seen → P1, still must harden");
+  assert.equal(findings[0].headRef, null);
+});
+
+test("pwn-request: github.head_ref is also a head-checkout tell", () => {
+  const wf = "on:\n  workflow_run:\n    workflows: [ci]\njobs:\n  x:\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          ref: ${{ github.head_ref }}\n";
+  const findings = detectPwnRequest(wf);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].trigger, "workflow_run");
+  assert.equal(findings[0].severity, "P0");
+});
+
+test("pwn-request: a plain pull_request (no _target) workflow is NOT flagged", () => {
+  const wf = "name: ci\non:\n  pull_request:\n    branches: [main]\njobs:\n  build:\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}\n";
+  const findings = detectPwnRequest(wf);
+  assert.equal(findings.length, 0, "plain pull_request does not run with base-repo secrets on fork input — not the pwn-request class");
 });

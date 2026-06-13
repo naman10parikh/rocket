@@ -20,6 +20,14 @@ export interface UsesRef {
   readonly ref: string | null;
   /** true when `ref` is a full 40-char commit SHA (the only safe pin). */
   readonly pinned: boolean;
+  /**
+   * true when the action is GitHub-owned first-party (`actions/*` or `github/*`) — the lower-risk class.
+   * OP-9 treats "first-party-or-vendored" as the trusted tier; every named 2026 mutable-tag exploit
+   * (tj-actions, reviewdog, Trivy) was a THIRD-party action. A non-SHA first-party ref is still worth
+   * pinning for max hardening, but it is not the P0 attack surface a non-SHA third-party ref is — so the
+   * audit verb grades it P1, not P0, to keep the genuine third-party P0 from being buried.
+   */
+  readonly firstParty: boolean;
   /** the source line number (1-based) for the finding. */
   readonly line: number;
 }
@@ -36,10 +44,19 @@ export interface RefLintResult {
 const FULL_SHA = /^[0-9a-f]{40}$/;
 // `uses:` capturing the value, tolerant of quotes and inline comments.
 const USES_LINE = /^\s*-?\s*uses:\s*['"]?([^'"#\s]+)['"]?/;
+// GitHub-owned first-party action orgs (the trusted tier per OP-9). Matched case-insensitively on the
+// `org/` prefix of the action path.
+const FIRST_PARTY_ORGS = ["actions/", "github/"];
 
 /** True iff `ref` is a full 40-hex commit SHA — the only ref form that is immutable. */
 export function isShaPinned(ref: string | null): boolean {
   return ref !== null && FULL_SHA.test(ref);
+}
+
+/** True iff `action` is in a GitHub-owned first-party org (`actions/*` / `github/*`). */
+export function isFirstParty(action: string): boolean {
+  const a = action.toLowerCase();
+  return FIRST_PARTY_ORGS.some((org) => a.startsWith(org));
 }
 
 /**
@@ -61,7 +78,7 @@ export function refLint(workflowText: string): RefLintResult {
     const at = raw.lastIndexOf("@");
     const action = at >= 0 ? raw.slice(0, at) : raw;
     const ref = at >= 0 ? raw.slice(at + 1) : null;
-    refs.push({ raw, action, ref, pinned: isShaPinned(ref), line: i + 1 });
+    refs.push({ raw, action, ref, pinned: isShaPinned(ref), firstParty: isFirstParty(action), line: i + 1 });
   }
 
   const unpinned = refs.filter((r) => !r.pinned);

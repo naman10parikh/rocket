@@ -12,9 +12,17 @@
 const FULL_SHA = /^[0-9a-f]{40}$/;
 // `uses:` capturing the value, tolerant of quotes and inline comments.
 const USES_LINE = /^\s*-?\s*uses:\s*['"]?([^'"#\s]+)['"]?/;
+// GitHub-owned first-party action orgs (the trusted tier per OP-9). Matched case-insensitively on the
+// `org/` prefix of the action path.
+const FIRST_PARTY_ORGS = ["actions/", "github/"];
 /** True iff `ref` is a full 40-hex commit SHA — the only ref form that is immutable. */
 export function isShaPinned(ref) {
     return ref !== null && FULL_SHA.test(ref);
+}
+/** True iff `action` is in a GitHub-owned first-party org (`actions/*` / `github/*`). */
+export function isFirstParty(action) {
+    const a = action.toLowerCase();
+    return FIRST_PARTY_ORGS.some((org) => a.startsWith(org));
 }
 /**
  * Lint the raw text of a GitHub Actions workflow for non-SHA `uses:` refs.
@@ -35,7 +43,7 @@ export function refLint(workflowText) {
         const at = raw.lastIndexOf("@");
         const action = at >= 0 ? raw.slice(0, at) : raw;
         const ref = at >= 0 ? raw.slice(at + 1) : null;
-        refs.push({ raw, action, ref, pinned: isShaPinned(ref), line: i + 1 });
+        refs.push({ raw, action, ref, pinned: isShaPinned(ref), firstParty: isFirstParty(action), line: i + 1 });
     }
     const unpinned = refs.filter((r) => !r.pinned);
     return { refs, unpinned, allPinned: unpinned.length === 0 };

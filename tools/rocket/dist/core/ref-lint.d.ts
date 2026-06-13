@@ -19,6 +19,14 @@ export interface UsesRef {
     readonly ref: string | null;
     /** true when `ref` is a full 40-char commit SHA (the only safe pin). */
     readonly pinned: boolean;
+    /**
+     * true when the action is GitHub-owned first-party (`actions/*` or `github/*`) — the lower-risk class.
+     * OP-9 treats "first-party-or-vendored" as the trusted tier; every named 2026 mutable-tag exploit
+     * (tj-actions, reviewdog, Trivy) was a THIRD-party action. A non-SHA first-party ref is still worth
+     * pinning for max hardening, but it is not the P0 attack surface a non-SHA third-party ref is — so the
+     * audit verb grades it P1, not P0, to keep the genuine third-party P0 from being buried.
+     */
+    readonly firstParty: boolean;
     /** the source line number (1-based) for the finding. */
     readonly line: number;
 }
@@ -32,6 +40,8 @@ export interface RefLintResult {
 }
 /** True iff `ref` is a full 40-hex commit SHA — the only ref form that is immutable. */
 export declare function isShaPinned(ref: string | null): boolean;
+/** True iff `action` is in a GitHub-owned first-party org (`actions/*` / `github/*`). */
+export declare function isFirstParty(action: string): boolean;
 /**
  * Lint the raw text of a GitHub Actions workflow for non-SHA `uses:` refs.
  * Text-based (not a YAML parse) on purpose: it must survive malformed YAML the audit verb feeds it,

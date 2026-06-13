@@ -33,6 +33,7 @@ const { checkTimestampInversion } = await import(join(DIST, "core", "timestamp.j
 const { compareSha } = await import(join(DIST, "core", "sha-compare.js"));
 const { checkPathsAsRequired } = await import(join(DIST, "core", "paths-check.js"));
 const { classifyMigration } = await import(join(DIST, "core", "expand-contract.js"));
+const { detectPwnRequest } = await import(join(DIST, "core", "pwn-request.js"));
 
 // ── a tiny flat-YAML reader (no js-yaml; the golden spec is intentionally flat) ──────────────
 // Supports: `key: value`, `key: |` block scalars (indented continuation), and `- item` lists under a key.
@@ -97,7 +98,10 @@ function runGolden(spec) {
     if (spec.expect_not_all_pinned === "true") need(refs.allPinned === false, "expected the transitive/unpinned gap (must NOT report all-pinned ✓)");
     if (spec.expect_paths_severity) need(paths.severity === spec.expect_paths_severity, `expected paths severity ${spec.expect_paths_severity}, got ${paths.severity}`);
     if (spec.expect_action) need(refs.unpinned.some((u) => u.action === spec.expect_action), `expected ${spec.expect_action} flagged as non-SHA`);
-    return { pass, reasons, observed: { unpinned: refs.unpinned.length, allPinned: refs.allPinned, pathsSeverity: paths.severity } };
+    // pwn-request (P3) — the most common RCE class; G4 asserts the deterministic detection (T-user fix).
+    const pwn = detectPwnRequest(wf);
+    if (spec.expect_pwn_severity) need(pwn.length > 0 && pwn[0].severity === spec.expect_pwn_severity, `expected pwn-request severity ${spec.expect_pwn_severity}, got ${pwn.length ? pwn[0].severity : "none"}`);
+    return { pass, reasons, observed: { unpinned: refs.unpinned.length, allPinned: refs.allPinned, pathsSeverity: paths.severity, pwn: pwn.length ? pwn[0].severity : "none" } };
   }
 
   if (cmd === "timestamp") {

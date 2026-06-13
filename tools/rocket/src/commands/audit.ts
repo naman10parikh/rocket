@@ -16,6 +16,7 @@ import { spawnSync } from "node:child_process";
 
 import { refLint } from "../core/ref-lint.js";
 import { checkPathsAsRequired } from "../core/paths-check.js";
+import { detectPwnRequest } from "../core/pwn-request.js";
 import type { CommandResult } from "../output.js";
 import { errorResult } from "../output.js";
 
@@ -74,17 +75,48 @@ export function runAudit(path: string): CommandResult {
       continue;
     }
 
-    // P0 — mutable-tag class: every non-SHA `uses:` ref.
+    // P0/P1 — mutable-tag class: every non-SHA `uses:` ref. THIRD-party non-SHA = P0 (the exploited
+    // attack surface — tj-actions/reviewdog/Trivy were all third-party); FIRST-party (`actions/*` /
+    // `github/*`) non-SHA = P1 (OP-9's trusted tier — still pin for max hardening, but don't bury the
+    // genuine third-party P0 under GitHub's own actions). T-user/CP123-B precision fix.
     const refs = refLint(text);
     for (const u of refs.unpinned) {
+      if (u.firstParty) {
+        findings.push({
+          id: "P1-UNPINNED-FIRST-PARTY",
+          severity: "P1",
+          rule: "mutable-tag — first-party (P1)",
+          file,
+          line: u.line,
+          detail: `non-SHA first-party ref \`uses: ${u.raw}\` — GitHub-owned (\`actions/*\`/\`github/*\`), the lower-risk tier (OP-9). A major-version tag still resolves at runtime, so SHA-pin for MAX hardening; but this is not the P0 attack surface a non-SHA THIRD-party ref is.`,
+          fix: `SHA-pin to a full 40-hex commit + a comment of the original tag for maximum hardening (zizmor auto-emits this). Lower priority than third-party refs — first-party orgs are the trusted tier.`,
+        });
+      } else {
+        findings.push({
+          id: "P0-UNPINNED-USES",
+          severity: "P0",
+          rule: "mutable-tag (P0)",
+          file,
+          line: u.line,
+          detail: `non-SHA THIRD-party action ref \`uses: ${u.raw}\` — resolves the tag to a commit at runtime; a force-push silently changes the code (tj-actions CVE-2025-30066 class — every named 2026 mutable-tag exploit was third-party).`,
+          fix: `SHA-pin to a full 40-hex commit + a comment of the original tag (what zizmor auto-emits). Then rotate every secret this workflow's secrets:/env touch if the tag was ever trusted.`,
+        });
+      }
+    }
+
+    // P0/P1 — pwn-request class: a dangerous trigger (`pull_request_target`/`workflow_run`/comment) +
+    // checkout-of-PR-head = RCE with base-repo secrets (brain P3, "one grep catches the most common RCE
+    // class"). This was the gap a fresh user found: the flagship security verb advertised pwn-request
+    // (PLAN §4, the persona, the skill, G4) but the audit core never detected it. T-user/CP123-B fix.
+    for (const pr of detectPwnRequest(text)) {
       findings.push({
-        id: "P0-UNPINNED-USES",
-        severity: "P0",
-        rule: "mutable-tag (P0)",
+        id: pr.severity === "P0" ? "P0-PWN-REQUEST" : "P1-PWN-REQUEST",
+        severity: pr.severity,
+        rule: `pwn-request — ${pr.trigger} (P3)`,
         file,
-        line: u.line,
-        detail: `non-SHA action ref \`uses: ${u.raw}\` — resolves the tag to a commit at runtime; a force-push silently changes the code (tj-actions CVE-2025-30066 class).`,
-        fix: `SHA-pin to a full 40-hex commit + a comment of the original tag (what zizmor auto-emits). Then rotate every secret this workflow's secrets:/env touch if the tag was ever trusted.`,
+        line: pr.headRefLine ?? pr.triggerLine,
+        detail: pr.reason,
+        fix: "default `permissions: read-all` at workflow top (escalate per-job); NEVER checkout the PR head under this trigger — split into an untrusted `pull_request` build with no secrets that uploads an artifact, then a trusted `workflow_run` that consumes it; add a `repository_owner` guard; egress-filter with step-security/harden-runner.",
       });
     }
 
@@ -117,9 +149,12 @@ export function runAudit(path: string): CommandResult {
 
   const p0 = findings.filter((f) => f.severity === "P0").length;
   const ok = findings.length === 0;
+  // Only say "Fix P0 before any deploy" when a P0 actually exists; P1-only findings (e.g. first-party
+  // non-SHA refs) are hardening recommendations, not deploy blockers. T-user/CP123-B honesty fix.
+  const advice = p0 > 0 ? "Fix P0 before any deploy." : "P1-only — harden when convenient; no P0 deploy blocker.";
   const summary = ok
     ? `no P0/P1 findings across ${files.length} workflow file(s) — but verify the transitive uses: tree (P2).`
-    : `${findings.length} finding(s) (${p0} P0) across ${files.length} file(s). Fix P0 before any deploy.`;
+    : `${findings.length} finding(s) (${p0} P0) across ${files.length} file(s). ${advice}`;
 
   return {
     command: "audit",
