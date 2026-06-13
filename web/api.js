@@ -192,8 +192,10 @@ function ask(query) {
   return new Promise((resolve) => {
     if (!existsSync(MEMORY_SEARCH)) return resolve({ query, hits: [], error: "memory-search.sh not found" });
     execFile(
+      // --brain-only: the Ask view is "BM25 over brain/" (A5/§10 oracle scope), not the rules/memory
+      // corpus — so it searches the 9 brain files only, which is spec-correct AND fast (the 18s-hang fix).
       "bash",
-      [MEMORY_SEARCH, query, "--limit", "5"],
+      [MEMORY_SEARCH, query, "--limit", "5", "--brain-only"],
       { cwd: REPO, timeout: 30_000, maxBuffer: 4 * 1024 * 1024 },
       (err, stdout) => {
         if (err && !stdout) return resolve({ query, hits: [], error: String(err.message || err) });

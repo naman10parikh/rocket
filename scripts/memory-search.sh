@@ -19,6 +19,7 @@ RULES_DIR="$PROJECT_DIR/.claude/rules"
 QUERY=""
 LIMIT=5
 VERBOSE=false
+BRAIN_ONLY=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -30,10 +31,18 @@ while [[ $# -gt 0 ]]; do
       VERBOSE=true
       shift
       ;;
+    --brain-only)
+      # Restrict the search to brain/*.md only (the release-eng oracle scope, A5/§10). The cockpit "Ask"
+      # view passes this: it is "BM25 over brain/", not over the rules/memory corpus — so it searches 9
+      # files instead of ~31, which is both spec-correct AND fast (the 18s hang fix). (T-user/CP123-B.)
+      BRAIN_ONLY=true
+      shift
+      ;;
     --help|-h)
-      echo "Usage: memory-search.sh \"query\" [--limit N] [--verbose]"
+      echo "Usage: memory-search.sh \"query\" [--limit N] [--verbose] [--brain-only]"
       echo ""
       echo "Searches across Energy's memory system:"
+      echo "  - brain/*.md (the release-eng expertise layer — highest weight)"
       echo "  - memory/LEARNINGS.md (learnings & patterns)"
       echo "  - memory/daily/*.md (session logs)"
       echo "  - memory/topics/*.md (permanent topic files)"
@@ -41,8 +50,9 @@ while [[ $# -gt 0 ]]; do
       echo "  - .claude/rules/*.md (hard rules)"
       echo ""
       echo "Options:"
-      echo "  --limit N    Return top N results (default: 5)"
-      echo "  --verbose    Show scoring details"
+      echo "  --limit N      Return top N results (default: 5)"
+      echo "  --verbose      Show scoring details"
+      echo "  --brain-only   Search ONLY brain/*.md (the oracle scope — what the cockpit Ask view uses)"
       exit 0
       ;;
     *)
@@ -60,6 +70,14 @@ fi
 
 # Split query into individual terms for scoring
 IFS=' ' read -ra TERMS <<< "$QUERY"
+
+# Pre-lowercase each term ONCE (bash-3.2-safe — macOS ships bash 3.2 so `${x,,}` is unavailable) so the
+# hot per-line scoring loop in extract_context can use a zero-subprocess `case` glob match instead of an
+# `echo | grep` spawn per (line × term). Built once here, reused for every file. (T-user/CP123-B perf.)
+TERMS_LC=()
+for _t in "${TERMS[@]}"; do
+  TERMS_LC+=("$(printf '%s' "$_t" | tr '[:upper:]' '[:lower:]')")
+done
 
 # Temp file for results
 RESULTS_FILE=$(mktemp)
@@ -144,11 +162,17 @@ extract_context() {
     local line_num="${line_data%%:*}"
     local line_content="${line_data#*:}"
     local line_score=0
-
-    for term in "${TERMS[@]}"; do
-      if echo "$line_content" | grep -qi "$term" 2>/dev/null; then
-        line_score=$((line_score + 1))
-      fi
+    # Score terms with a bash-BUILTIN substring match against a once-lowercased line — NOT `echo | grep`
+    # per term. The old per-(line,term) subprocess spawn was the cockpit "Ask" 11-18s hang: dozens of
+    # spawns per file × ~30 files. We lowercase the line ONCE (single `tr`, bash-3.2-safe — macOS ships
+    # bash 3.2, so `${x,,}` is unavailable) and compare terms (pre-lowercased in TERMS_LC) with the `==`
+    # glob builtin (zero subprocess). Identical score, no storm. (T-user/CP123-B perf fix.)
+    local lc_content
+    lc_content=$(printf '%s' "$line_content" | tr '[:upper:]' '[:lower:]')
+    for lc_term in "${TERMS_LC[@]}"; do
+      case "$lc_content" in
+        *"$lc_term"*) line_score=$((line_score + 1)) ;;
+      esac
     done
 
     if [ "$line_score" -gt "$best_score" ]; then
@@ -174,33 +198,37 @@ for f in "$BRAIN_DIR"/*.md; do
   [ -f "$f" ] && FILES+=("$f")
 done
 
-# LEARNINGS.md
-[ -f "$MEMORY_DIR/LEARNINGS.md" ] && FILES+=("$MEMORY_DIR/LEARNINGS.md")
+# --brain-only (the cockpit oracle scope) stops here: brain/*.md ONLY, fast + spec-correct (A5/§10).
+# The full corpus below is for the general CLI/doctor usage.
+if [ "$BRAIN_ONLY" = false ]; then
+  # LEARNINGS.md
+  [ -f "$MEMORY_DIR/LEARNINGS.md" ] && FILES+=("$MEMORY_DIR/LEARNINGS.md")
 
-# Daily logs
-for f in "$MEMORY_DIR"/daily/*.md; do
-  [ -f "$f" ] && FILES+=("$f")
-done
+  # Daily logs
+  for f in "$MEMORY_DIR"/daily/*.md; do
+    [ -f "$f" ] && FILES+=("$f")
+  done
 
-# Topic files
-for f in "$MEMORY_DIR"/topics/*.md; do
-  [ -f "$f" ] && FILES+=("$f")
-done
+  # Topic files
+  for f in "$MEMORY_DIR"/topics/*.md; do
+    [ -f "$f" ] && FILES+=("$f")
+  done
 
-# Vault notes
-for f in "$VAULT_DIR"/*.md; do
-  [ -f "$f" ] && FILES+=("$f")
-done
+  # Vault notes
+  for f in "$VAULT_DIR"/*.md; do
+    [ -f "$f" ] && FILES+=("$f")
+  done
 
-# Rules
-for f in "$RULES_DIR"/*.md; do
-  [ -f "$f" ] && FILES+=("$f")
-done
+  # Rules
+  for f in "$RULES_DIR"/*.md; do
+    [ -f "$f" ] && FILES+=("$f")
+  done
 
-# Archive (lower priority but still searchable)
-for f in "$MEMORY_DIR"/archive/*.md; do
-  [ -f "$f" ] && FILES+=("$f")
-done
+  # Archive (lower priority but still searchable)
+  for f in "$MEMORY_DIR"/archive/*.md; do
+    [ -f "$f" ] && FILES+=("$f")
+  done
+fi
 
 # Score each file
 for file in "${FILES[@]}"; do
