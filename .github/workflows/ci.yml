@@ -68,6 +68,8 @@ jobs:
     # read-only JSON API in isolation; the E2E renders the vanilla-JS SPA in a real headless browser and
     # asserts all four views. Both fail the job on any failure. Screenshots upload as evidence artifacts.
     runs-on: ubuntu-latest
+    # Backstop: a Playwright/browser-download hang fast-fails at 12min instead of GitHub's 6h job ceiling.
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -89,10 +91,19 @@ jobs:
           npm run eval
       - name: Cockpit COMPONENT tests (the read-only JSON API in isolation — red-blocking)
         run: node --test web/test/cockpit-api.test.mjs
-      - name: Install Playwright + chromium (ephemeral — NOT a repo dep; the repo stays zero-dep)
+      # Download-only — NO `--with-deps` apt. The apt phase is the unkillable-by-`timeout` sudo-grandchild
+      # 6h-hang (turbo Wave-T); GH ubuntu-latest already ships chromium's system libs, so apt is redundant.
+      # Call the global binary directly (NOT `npx --yes`, which re-resolves+re-downloads). `timeout 200`×3
+      # fast-fails a stalled secondary-artifact (headless-shell) CDN pull and retries; loud red if all stall.
+      - name: Install Playwright + chromium (download only — NO apt, retry transient stalls)
         run: |
           npm i -g playwright@1.58.2
-          npx --yes playwright@1.58.2 install --with-deps chromium
+          ok=0
+          for i in 1 2 3; do
+            if timeout 200 playwright install chromium; then ok=1; break; fi
+            echo "::warning::playwright chromium install attempt $i stalled (>200s) — retrying"
+          done
+          [ "$ok" = 1 ] || { echo "::error::playwright chromium install failed after 3 attempts"; exit 1; }
       - name: Cockpit E2E (real headless browser renders all four views — red-blocking)
         run: SHOTS_DIR="$RUNNER_TEMP/cockpit-shots" node web/test/cockpit-e2e.mjs
       - name: Upload cockpit screenshots (evidence — Cluster G "Playwright E2E screenshots in Wave T")
