@@ -245,6 +245,11 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  process.stdout.write(`rocket cockpit → http://localhost:${PORT}  (the chairman's window; Ctrl-C to stop)\n`);
+// Bind LOOPBACK ONLY (127.0.0.1) — never INADDR_ANY (0.0.0.0). The cockpit is the chairman's local
+// window, NOT a network service (PLAN §10 + D3: "localhost … the chairman's window, not the agent's
+// interface"). Without the explicit host arg, Node defaults to 0.0.0.0 → the audit trail + brain would be
+// LAN-reachable with zero auth (Wave-T adversary MAJOR). The host is fixed, not configurable: there is no
+// legitimate reason to expose this read-only cockpit beyond the loopback (only the port is a knob, §10).
+server.listen(PORT, "127.0.0.1", () => {
+  process.stdout.write(`rocket cockpit → http://127.0.0.1:${PORT}  (the chairman's window, loopback-only; Ctrl-C to stop)\n`);
 });

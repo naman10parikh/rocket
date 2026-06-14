@@ -14,11 +14,15 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER = join(HERE, "..", "dist", "mcp-server.js");
+const REPO_ROOT = join(HERE, "..", "..", ".."); // tools/rocket/test → repo root
 // The bad-workflow fixture lives at the repo root (A7). test/ is tools/rocket/test → ../../../fixtures.
-const BAD_WORKFLOW = join(HERE, "..", "..", "..", "fixtures", "bad-workflow.yml");
+const BAD_WORKFLOW = join(REPO_ROOT, "fixtures", "bad-workflow.yml");
+const STALE_SHA_FIXTURE = join(REPO_ROOT, "fixtures", "stale-sha-fixture");
+const RUNS_LOG = join(REPO_ROOT, "logs", "runs.jsonl");
 
 /** The 7 tools rocket's MCP server MUST expose, mirroring the CLI verbs (snake_case rocket_*). */
 const EXPECTED_TOOLS = [
@@ -43,7 +47,10 @@ interface RpcResponse {
  */
 function rpc(requests: Array<Record<string, unknown>>): Promise<Map<number | string, RpcResponse>> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [SERVER], { stdio: ["pipe", "pipe", "inherit"] });
+    // Spawn from the repo root — the real deployment runs the server from there (`.mcp.json` invokes
+    // `node tools/rocket/dist/mcp-server.js` with the repo as cwd), so a relative in-repo path
+    // (`fixtures/bad-workflow.yml`) resolves the same way it does in production.
+    const child = spawn(process.execPath, [SERVER], { stdio: ["pipe", "pipe", "inherit"], cwd: REPO_ROOT });
     const byId = new Map<number | string, RpcResponse>();
     let buf = "";
     child.stdout.setEncoding("utf8");
@@ -109,4 +116,47 @@ test("an unknown tool name degrades to isError, not a crash", async () => {
   ]);
   const call = res.get(5);
   assert.equal(call?.result?.isError, true, "unknown tool → isError true");
+});
+
+// ── Wave-T regression: the MCP surface must leave the SAME §10 audit trail as the CLI ──
+// A deploy decision (verify/wire/rollback) made through the agent-primary MCP surface MUST append a line
+// to logs/runs.jsonl — the gap a power-user found (MCP delta=0 vs CLI delta=1). One implementation, two
+// surfaces (log-decision.ts), so this asserts the trail fires on the MCP path too.
+test("tools/call rocket_verify appends a deploy-decision line to logs/runs.jsonl (§10 trail)", async () => {
+  const before = existsSync(RUNS_LOG) ? readFileSync(RUNS_LOG, "utf8").split("\n").filter((l) => l.trim()).length : 0;
+  await rpc([
+    { jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "rocket_verify", arguments: { target: STALE_SHA_FIXTURE } } },
+  ]);
+  const after = existsSync(RUNS_LOG) ? readFileSync(RUNS_LOG, "utf8").split("\n").filter((l) => l.trim()).length : 0;
+  assert.equal(after - before, 1, "exactly one runs.jsonl line was appended by the MCP verify call");
+  const lastLine = readFileSync(RUNS_LOG, "utf8").split("\n").filter((l) => l.trim()).pop()!;
+  const entry = JSON.parse(lastLine) as { command: string; decision: string };
+  assert.equal(entry.command, "verify", "the appended line is a verify decision");
+  assert.equal(entry.decision, "NO-GO", "the stale-sha fixture is correctly logged NO-GO (prime directive)");
+});
+
+// ── Wave-T regression: the agent-reachable audit surface is path-confined to the repo ──
+// The CLI is operator-controlled, but the MCP is agent-reachable, so an absolute/`..` path that escapes
+// the repo (e.g. /etc/hosts) must be refused — not read and echoed back into the agent's context.
+test("tools/call rocket_audit refuses a path that escapes the repo root (no arbitrary-file read)", async () => {
+  const res = await rpc([
+    { jsonrpc: "2.0", id: 7, method: "tools/call", params: { name: "rocket_audit", arguments: { path: "/etc/hosts" } } },
+  ]);
+  const call = res.get(7);
+  assert.equal(call?.result?.isError, true, "an out-of-repo path is an error, not a successful read");
+  const payload = JSON.parse(call!.result!.content![0]!.text) as { command: string; error?: string; files?: string[] };
+  assert.ok(/escapes the repo root/.test(payload.error ?? ""), "the refusal names the confinement reason");
+  assert.ok(!payload.files || !payload.files.includes("/etc/hosts"), "/etc/hosts was never opened");
+});
+
+// And a relative in-repo path still works through the MCP surface (confinement doesn't break the happy path).
+test("tools/call rocket_audit accepts a relative in-repo path (confinement allows the happy path)", async () => {
+  const res = await rpc([
+    { jsonrpc: "2.0", id: 8, method: "tools/call", params: { name: "rocket_audit", arguments: { path: "fixtures/bad-workflow.yml" } } },
+  ]);
+  const call = res.get(8);
+  assert.ok(call?.result?.content, "a relative in-repo path round-trips");
+  const payload = JSON.parse(call!.result!.content![0]!.text) as { command: string; findings?: unknown[] };
+  assert.equal(payload.command, "audit");
+  assert.ok(Array.isArray(payload.findings) && payload.findings.length > 0, "the in-repo fixture produced findings");
 });

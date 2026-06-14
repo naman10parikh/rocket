@@ -21,9 +21,12 @@
  * No live keys here — secrets are read by the underlying cores from the gitignored `.env` (env refs only).
  */
 import { createInterface } from "node:readline";
+import { resolve, sep } from "node:path";
 
 import type { CommandResult } from "./output.js";
 import { errorResult } from "./output.js";
+import { logDecision } from "./log-decision.js";
+import { findRepoRoot } from "./log-run.js";
 import { runWire } from "./commands/wire.js";
 import { runAudit } from "./commands/audit.js";
 import { runVerify } from "./commands/verify.js";
@@ -84,6 +87,25 @@ function strategy(args: Record<string, unknown>): "bluegreen" | "canary" | undef
 }
 
 /**
+ * Is an agent-supplied path confined to the repo the MCP server runs in? (defense-in-depth, Wave-T
+ * adversary). The CLI is operator-controlled — a human points `rocket audit` at a file deliberately — but
+ * the MCP is AGENT-reachable, so an absolute path (`/etc/hosts`) or a `..`-traversal would let an agent
+ * read any file the process can and echo it back into its own context. We reject anything that *resolves*
+ * outside the repo root; relative repo paths (`fixtures/bad-workflow.yml`, `.github/workflows`) pass.
+ *
+ * NOTE: this only VALIDATES — it does not rewrite the path. The caller passes the ORIGINAL path string to
+ * the core so the CLI↔MCP output stays byte-identical (the `file:` field in findings is the path the caller
+ * gave, not a server-resolved absolute path — preserving the parity property the contract test guards).
+ */
+const REPO_ROOT = findRepoRoot();
+function isConfinedToRepo(rawPath: string): boolean {
+  const resolved = resolve(REPO_ROOT, rawPath);
+  // must be the repo root itself or strictly inside it (the trailing sep guards a sibling-prefix bypass,
+  // e.g. `/repo-evil` vs `/repo`).
+  return resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + sep);
+}
+
+/**
  * THE tool table — mirrors the CLI 1:1 (PLAN §4 "MCP server tool list"). Each `run` is a thin wrapper
  * over the identical core function the CLI's command handler calls. Tool names use snake_case `rocket_*`
  * (the §4 sketch); arg names mirror the CLI flags.
@@ -121,6 +143,12 @@ const TOOLS: readonly ToolDef[] = [
     run: (a) => {
       const path = str(a, "path");
       if (!path) return errorResult("audit", "missing required arg: path");
+      // Agent-reachable surface → confine the path to the repo (no absolute/`..` arbitrary-file read).
+      // Validate the resolved path, but pass the ORIGINAL string to the core so CLI↔MCP output stays
+      // byte-identical (parity contract): the core sees the same path the caller gave the CLI.
+      if (!isConfinedToRepo(path)) {
+        return errorResult("audit", `path escapes the repo root (agent-reachable surface is confined): ${path}`);
+      }
       return runAudit(path);
     },
   },
@@ -231,18 +259,34 @@ function listTools(): { tools: Array<{ name: string; description: string; inputS
   };
 }
 
+/** Map an MCP tool name (`rocket_verify`) to the deploy-decision verb that must be trailed (`verify`). */
+const TRAILED_TOOL_TO_COMMAND: Readonly<Record<string, string>> = {
+  rocket_verify: "verify",
+  rocket_wire: "wire",
+  rocket_rollback: "rollback",
+};
+
 /** Run a `tools/call`. Returns the MCP content shape `{ content: [{type:"text",text}], isError }`. */
 function callTool(name: string, args: Record<string, unknown>): { content: Array<{ type: "text"; text: string }>; isError: boolean } {
   const tool = TOOL_BY_NAME.get(name);
   if (!tool) {
     return { content: [{ type: "text", text: JSON.stringify({ error: `unknown tool: ${name}` }) }], isError: true };
   }
+  const start = Date.now();
   let result: CommandResult;
   try {
     result = tool.run(args ?? {});
   } catch (err) {
     // Graceful: a core that throws on malformed input becomes an isError result, never a server crash.
     result = errorResult(name, `tool execution error: ${(err as Error).message}`);
+  }
+  // §10 audit trail — write the SAME deploy-decision line the CLI writes (one implementation, two
+  // surfaces). The MCP is the agent-primary surface (PLAN §1/D3), so a verify/wire/rollback decision made
+  // through an agent MUST leave an auditable `logs/runs.jsonl` line — the gap a Wave-T power-user found.
+  // Skip a wire dry-run (it makes no decision + mutates nothing), exactly as the CLI does.
+  const trailedCommand = TRAILED_TOOL_TO_COMMAND[name];
+  if (trailedCommand && !(name === "rocket_wire" && args?.["dryRun"] === true)) {
+    logDecision(trailedCommand, result, start);
   }
   // Emit the full structured CommandResult as JSON text (the agent-primary surface), mirroring `--json`.
   const text = JSON.stringify({ command: result.command, ok: result.ok, summary: result.summary, ...result.data }, null, 2);
