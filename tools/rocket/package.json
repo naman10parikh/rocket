@@ -34,7 +34,8 @@
     "prepublishOnly": "echo 'parked: private fleet repo, do not publish (RQ7)' && exit 1"
   },
   "dependencies": {
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "e2b": "^2.30.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
