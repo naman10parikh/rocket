@@ -14,7 +14,7 @@
  *           its SPECIFIC brain stance (the discriminating marker, not a generic 'deploy' word).
  *   PERSONAS (HARNESS-OVERRIDES §6 + Model-routing row + the "faked cell" guard "personas pin `model: inherit`
  *           instead of an explicit opus = ❌"): each of the 2 rocket personas has parseable YAML frontmatter,
- *           a matching `name:`, an EXPLICIT `model: opus|claude-opus*` (never `inherit`/absent), `allowed-tools`,
+ *           a matching `name:`, an EXPLICIT `model: opus|claude-opus*` (never `inherit`/absent), `tools:`,
  *           and names its scoped brain reflex in the body.
  *
  * Zero-dep (node:test + node:fs). Reads the REAL on-disk artifacts under <repo>/skills + <repo>/.claude/agents.
@@ -84,7 +84,8 @@ for (const { file, reflex, why } of REQUIRED_PERSONAS) {
     assert.ok(fm.model, `${file} must pin an explicit 'model:' (D6 — no bare default / no inherit)`);
     assert.match(fm.model, /^(opus|claude-opus)/, `${file} (a tester persona) must route to opus, not '${fm.model}'`);
     assert.doesNotMatch(fm.model, /inherit/, `${file} must NOT use 'model: inherit' (the CP123-C death cause)`);
-    assert.ok(/allowed-tools/.test(raw), `${file} should declare allowed-tools (scoped capability)`);
+    // `tools:` is the field Claude Code reads; `allowed-tools` is a skill field that sub-agents ignore.
+    assert.ok(/^tools:/m.test(raw), `${file} should declare tools: (scoped capability)`);
     // the scoped brain reflex must be named in the body (a generic persona would not name these).
     assert.match(raw, reflex, `${file} must name its scoped brain reflex — ${why}`);
   });

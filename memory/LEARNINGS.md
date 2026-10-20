@@ -20,3 +20,6 @@ Every error → root cause → rule. Auto-compressed when >500 lines (memory-com
 - **The sub-agents' tool limits were never applied.** Both agents set `allowed-tools`, a skill field that
   sub-agents ignore, so each inherited every tool. Rule: a sub-agent restricts tools with `tools:` (a
   comma-separated string or a YAML list).
+- **The fix went red in CI.** `test/component.test.ts` asserted the old `allowed-tools` field, and the suite
+  was not re-run after the one-line change. Rule: when a field changes, grep the tests for the old name and
+  run the full suite before the commit.
