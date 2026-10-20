@@ -34,6 +34,8 @@ jobs:
           node-version: 24
 
       - name: Run the deterministic RSI engine (guarded — green no-op until E5 lands the engine)
+        env:
+          GH_TOKEN: ${{ github.token }} # gh needs it in Actions; the drift check reads public repositories only
         run: |
           if [ ! -f workflows/rsi.workflow.js ]; then
             echo "::notice::RSI engine (workflows/rsi.workflow.js) not built yet (CP123 cluster E5) — armed schedule fired, engine absent → green no-op."
