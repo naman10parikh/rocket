@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+title: "Rocket: Release engineering you can put in CI."
+type: software
+authors:
+  - family-names: Parikh
+    given-names: Naman
+repository-code: "https://github.com/naman10parikh/rocket"
+license: MIT
+version: "0.1.0"
+abstract: "Release engineering you can put in CI."
+keywords: ["agent-native", "ci-cd", "github-actions", "deployment"]
