@@ -48,6 +48,23 @@ test("integration: rocket wire generates a workflow file that lands AND is actio
   }
 });
 
+// ── wire's own output passes rocket's own audit (every action SHA-pinned) ─────
+test("integration: rocket audit finds nothing in the workflow rocket wire generates (npm and pnpm)", () => {
+  for (const lockfile of [null, "pnpm-lock.yaml"]) {
+    const dir = mkdtempSync(join(tmpdir(), "rocket-wire-audit-"));
+    try {
+      writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x", dependencies: { next: "15.0.0" } }));
+      if (lockfile) writeFileSync(join(dir, lockfile), "lockfileVersion: '9.0'\n");
+      const w = runWire({ target: dir, lane: "vercel", strategy: "bluegreen" });
+      assert.equal(w.ok, true, `wire should succeed: ${w.summary}`);
+      const r = runAudit(join(dir, ".github", "workflows", "deploy.yml"));
+      assert.equal(r.ok, true, `audit must pass on wire's own output (${lockfile ?? "npm"}): ${JSON.stringify(r.data.findings)}`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
+
 // ── audit on a known-bad fixture → expected findings ──────────────────────────
 test("integration: rocket audit on fixtures/bad-workflow.yml flags non-SHA uses + paths-as-required", () => {
   const fixture = join(REPO_ROOT, "fixtures", "bad-workflow.yml");

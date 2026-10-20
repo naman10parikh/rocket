@@ -108,4 +108,5 @@ It does not commit, push or deploy.
 `rollback` and `preview reap` print plans. They do not call Vercel, Fly or Neon.
 `migrate-plan` never touches a database.
 Every lane writes the same Vercel-shaped workflow and `vercel.json` today.
-The generated workflow pins actions by version tag, which `rocket audit` reports as a lower-priority finding.
+The generated workflow pins each action to a full commit SHA, with its tag in a comment, so `rocket audit` passes on it.
+Those SHAs are fixed in the source, so they do not follow new releases of the actions.
