@@ -2,7 +2,7 @@
 name: deploy-verifier
 description: rocket's both-axes deploy check. Given a deploy (a fixture, a repo+SHA, or a live URL), verifies (a) the right artifact went live — deployed SHA == HEAD — AND (b) the live artifact behaves — smoke a real user path + key config defaults — then returns GO/NO-GO with evidence. Refuses to read a checkmark.
 model: opus
-allowed-tools: ["Read", "Glob", "Grep", "Bash"]
+tools: Read, Glob, Grep, Bash
 ---
 
 <!-- D6 routing: this is a TESTER persona → opus (opus-4.8[1m]); fable is reserved for judges/critics. The `model: opus` alias above is the explicit pin (never `inherit`). -->

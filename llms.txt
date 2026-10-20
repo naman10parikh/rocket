@@ -1,80 +1,94 @@
 # rocket
 
-> The Energy fleet's **Deploy + CI/CD (release engineering)** domain-expert employee — a senior release
-> engineer that gets your code to production and *proves* it actually got there, then keeps rollback possible.
-> A tool-employee operated by coding agents (CLI + MCP) and watched by the chairman (the local cockpit).
-> Prime directive: **a green check binds to a commit, an artifact, AND a config — verify all three.
-> Verify, don't trust the checkmark.** Powered by Energy.
+> Release engineering you can put in CI: an agent-native, self-improving deploy and CI/CD employee that gets code to production, proves it got there, and keeps rollback possible.
 
-This is the agent-readable map of rocket's docs and surfaces. **Read `AGENTS.md` first** for how to invoke
-every tool, the hard boundary, and the NOT-list. Paths are repo-relative to the rocket repo root.
+rocket is a senior release engineer as a tool. Coding agents call it through a CLI, an MCP server and skills; a person can watch it through a local cockpit. Its prime directive: a green check binds to a commit, an artifact and a config, so verify all three. Verify, don't trust the checkmark.
 
-**One-line default lane map:** Vercel = web frontends · Fly / Railway = long-running backends/workers ·
-Cloudflare = edge + agent sandboxes + durable workflows · E2B = ephemeral agent compute ·
-GitHub Actions = the CI engine binding it all. Default `rocket wire` path = Vercel + GitHub Actions;
-Fly/Cloudflare/Railway are documented lanes wired on-demand per target.
+Default lane map: Vercel for web frontends, Fly or Railway for long-running backends and workers, Cloudflare for the edge, agent sandboxes and durable workflows, E2B for ephemeral agent compute, and GitHub Actions as the CI engine that binds them. The default `rocket wire` path is Vercel plus GitHub Actions; the other lanes are wired on demand.
+
+Run it from GitHub with no clone: `npx -y -p github:naman10parikh/rocket rocket --help` for the CLI and `npx -y -p github:naman10parikh/rocket rocket-mcp` for the MCP server (stdio). Paths below are relative to the repository root.
 
 ## Start here
-- [AGENTS.md](./AGENTS.md): What rocket does, how to invoke every CLI/MCP tool, the boundary, the NOT-list.
-- [CLAUDE.md](./CLAUDE.md): Claude Code operating doc for this repo (the prime directive + the 3 HOUSE LAWS + commit convention).
-- [GOAL.md](./GOAL.md): The North Star for this harness.
+
+- [AGENTS.md](./AGENTS.md): what rocket does, how to invoke every CLI and MCP tool, the boundary and the NOT-list.
+- [CLAUDE.md](./CLAUDE.md): the Claude Code operating doc for this repository (the prime directive, the three house laws, the commit convention); it imports AGENTS.md.
+- [README.md](./README.md): what it is, the quick start, and how to install it in any coding agent.
 
 ## Identity
-- [identity/SOUL.md](./identity/SOUL.md): Who rocket is — Identity → Personality → Boundaries (launch-director voice, gauge-driven, paranoid-about-green).
-- [identity/BRAND.md](./identity/BRAND.md): Name rationale ("rocket = the thing that ships — ignition, ascent, abort beats a bad orbit"), tagline, design tokens.
-- [.well-known/agent.json](./.well-known/agent.json): A2A agent card (name / description / endpoint / the 7 capabilities).
 
-## The 3 HOUSE LAWS (non-negotiable — `brain/OPINIONS.md`)
-1. **HOUSE LAW 1 — Deploy strategy:** blue-green by default; canary ONLY when telemetry exists (you can define "healthy" before the rollout). For AI agents the canary metric IS the eval score.
-2. **HOUSE LAW 2 — Eval-gated CI:** block on **REGRESSION**, not an absolute floor. Dual threshold = absolute floor + Welch's-t delta vs a rolling 7-day baseline. The gate is the evolving golden dataset; `noSelfGrading`.
-3. **HOUSE LAW 3 — Vercel: ONE push at a time** (Git integration only, "Require Verified Commits" OFF). No rapid successive pushes (Hobby = 1 concurrent build → they cancel). No deploy-hook workflows. No manual `vercel --prod` unless Git integration is confirmed broken (rocket's PreToolUse hook enforces this).
+- [identity/SOUL.md](./identity/SOUL.md): who rocket is (launch-director voice, gauge-driven, paranoid about green): identity, personality, boundaries.
+- [identity/BRAND.md](./identity/BRAND.md): the name (rocket, the thing that ships: ignition, ascent, and an abort beats a bad orbit), the tagline and design tokens.
+- [.well-known/agent.json](./.well-known/agent.json): the A2A agent card (name, description, endpoint, the 7 capabilities).
 
-## Tools — the `rocket` CLI (Bash-invokable, `--json` on every read path; `tools/rocket/dist/cli.js`)
-- `rocket wire --target <repo> [--lane vercel|fly|cloudflare|railway] [--strategy bluegreen|canary] [--dry-run] [--json]` — **THE acceptance test:** generate an actionlint-clean GHA workflow + deploy config and commit it.
-- `rocket audit <path-to-.github/workflows | repo> [--json]` — the attack-class sweep + actionlint + zizmor; P0/P1 findings + SHA-pin fixes.
-- `rocket verify --target <repo|url> [--sha <expected>] [--json]` — both-axes deploy check (deployed SHA == HEAD + behavior smoke); emits GO/NO-GO; refuses to read a checkmark.
-- `rocket rollback --target <repo> [--to <deployment-id|image>] [--json]` — the rollback hierarchy fastest-first (flag → alias-repoint → image-pin → git-revert).
-- `rocket eval-gate --baseline <ref> [--floor <n>] [--seed-baseline] [--json]` — gate on regression vs a rolling baseline + absolute floor (dual threshold, Welch's-t); noSelfGrading.
-- `rocket migrate-plan --diff <schema-diff> [--json]` — the expand-contract 3-phase plan; refuses a destructive change coupled with dependent code. PLAN-ONLY (acorn owns the schema).
-- `rocket preview reap --repo <repo> [--older-than <d>] [--json]` — tear down leaked preview environments (lists orphans first).
-- `rocket doctor [--json]` — toolbelt self-check (act/actionlint/zizmor/gh installed, secrets present, brain searchable, eval green).
+## The three house laws (from brain/OPINIONS.md)
 
-Contract: one verb per concept (`get` not `info`); exit 0 (clean) / non-zero (finding / NO-GO / refusal / error); `--json` everywhere on read paths (agents are the primary customer — OP-19). The web-touching path (`verify` curling a live preview URL) uses `bb`/Stagehand or `playwright-cli` via Bash — **Playwright MCP is banned**.
+1. Deploy strategy: blue-green by default; canary only when telemetry exists (you can define "healthy" before the rollout). For AI agents the canary metric is the eval score.
+2. Eval-gated CI: block on regression, not an absolute floor. The dual threshold is an absolute floor plus a Welch's t delta against a rolling 7-day baseline. The gate is the evolving golden dataset; no self-grading.
+3. Vercel: one push at a time, through Git integration only, with "Require Verified Commits" off. No rapid successive pushes, no deploy-hook workflows, no manual `vercel --prod` unless Git integration is confirmed broken. rocket's PreToolUse hook enforces this.
 
-## MCP server (rocket's OWN — 7 tools, stdio)
-- [.mcp.json](./.mcp.json): the `rocket` server entry (empty `env` — no literal secrets; the cores read the gitignored `.env`).
-- **Endpoint / transport:** default **stdio** — `node tools/rocket/dist/mcp-server.js` (or the `rocket-mcp` bin). Each tool is a thin wrapper over the SAME core the CLI calls, so the MCP surface never drifts from the gated CLI. Dual-mode (hosted-OAuth Streamable-HTTP) is deferred to packaging.
-- **`tools/list`** returns: `rocket_wire` (→`rocket wire`), `rocket_audit` (→`rocket audit`), `rocket_verify` (→`rocket verify`), `rocket_rollback` (→`rocket rollback`), `rocket_eval_gate` (→`rocket eval-gate`), `rocket_migrate_plan` (→`rocket migrate-plan`), `rocket_preview_reap` (→`rocket preview reap`). Long-running calls (`verify`, `eval_gate`) carry the MCP Tasks-primitive seam (call-now/fetch-later).
+## CLI (`rocket`; `--json` on every read path; exit 0 when clean, non-zero on a finding, a NO-GO or a refusal)
 
-## Skills (`skills/*/SKILL.md` — each encodes a specific rocket brain stance, not a generic "deploy" reflex)
-- [deploy-verify](./skills/deploy-verify/SKILL.md): OP-4 + P1 (the two-ways-green-lies) — the both-axes check (SHA-compare + behavior smoke). The anti-checkmark reflex.
-- [workflow-audit](./skills/workflow-audit/SKILL.md): JOB3 + P0/P2/P3/P4 (mutable-tag, transitive, pwn-request, cache-poison) + the actionlint/zizmor invocation + DISPUTE 1 (pin AND audit AND minimize, never *believe* the pin).
-- [rollback-runbook](./skills/rollback-runbook/SKILL.md): JOB5 + OP-5/OP-6 (flag-flip beats redeploy) + the TanStack "we got popped" runbook (revoke → purge cache via API → SHA-pin → rotate) + Fly-has-no-one-command-rollback.
-- [migration-safety](./skills/migration-safety/SKILL.md): OP-7 + P23 + the expand-contract reflex (destructive change is a separate deploy ≥24–72h after stable; rollback-able by construction).
-- [eval-gate-design](./skills/eval-gate-design/SKILL.md): HOUSE LAW 2 + JOB4 (block-on-regression not floor; 60/30/10; the gate is the dataset; two gates; noSelfGrading).
+- [wire](./tools/rocket/src/commands/wire.ts): `rocket wire --target <repo> [--lane vercel|fly|cloudflare|railway] [--strategy bluegreen|canary] [--dry-run]` is the acceptance test: an actionlint-clean workflow and deploy config, committed.
+- [audit](./tools/rocket/src/commands/audit.ts): `rocket audit <workflows dir or repo>` sweeps the attack classes with actionlint and zizmor and gives P0 and P1 findings with SHA-pin fixes.
+- [verify](./tools/rocket/src/commands/verify.ts): `rocket verify --target <repo|url> [--sha <expected>]` checks both axes (the deployed SHA equals HEAD, and a behaviour smoke test passes) and answers GO or NO-GO.
+- [rollback](./tools/rocket/src/commands/rollback.ts): `rocket rollback --target <repo> [--to <deployment|image>]` runs the rollback hierarchy fastest first (flag, alias repoint, image pin, git revert).
+- [eval-gate](./tools/rocket/src/commands/eval-gate.ts): `rocket eval-gate --baseline <ref> [--floor <n>] [--seed-baseline]` gates on regression against a rolling baseline plus an absolute floor.
+- [migrate-plan](./tools/rocket/src/commands/migrate-plan.ts): `rocket migrate-plan --diff <schema-diff>` writes the expand-contract three-phase plan and refuses a destructive change coupled with dependent code. Plan only; acorn owns the schema.
+- [preview](./tools/rocket/src/commands/preview.ts): `rocket preview reap --repo <repo> [--older-than <d>]` lists, then tears down, leaked preview environments.
+- [doctor](./tools/rocket/src/commands/doctor.ts): `rocket doctor` checks the toolbelt (act, actionlint, zizmor, gh, secrets, a searchable brain, a green eval).
 
-## Sub-agents (`.claude/agents/*.md` — callable via `Agent`)
-- [pipeline-auditor](./.claude/agents/pipeline-auditor.md): the workflow attack-class sweep (mutable-tag / pwn-request / cache-poison / OIDC-misconfig) → findings. THE packaged sub-agent (highest fleet reuse).
-- [deploy-verifier](./.claude/agents/deploy-verifier.md): the both-axes deploy check (SHA-compare + behavior smoke) → GO/NO-GO.
+The web-touching path (`verify` against a live preview URL) uses `bb`/Stagehand or `playwright-cli` through Bash; the Playwright MCP is banned.
 
-## The brain (Memory — the six expertise artifacts)
-- [brain/MOC - rocket.md](./brain/MOC%20-%20rocket.md): the master hub for the brain.
-- [brain/EXPERTISE-MAP.md](./brain/EXPERTISE-MAP.md): the map of mastery, by job-to-be-done (start here).
-- [brain/OPINIONS.md](./brain/OPINIONS.md): the taste layer + the 3 HOUSE LAWS (OP-4…OP-21).
-- [brain/KNOWN-PITFALLS.md](./brain/KNOWN-PITFALLS.md): version-specific gotchas with detection + fix (P0…P34).
-- [brain/BATTLE-TESTED-SCENARIOS.md](./brain/BATTLE-TESTED-SCENARIOS.md): the 15 real incidents = the golden eval tasks (G1…G15).
-- [brain/TOOL-MATRIX.md](./brain/TOOL-MATRIX.md): canonical tools, defaults vs alts, agent-access, required secrets.
-- [brain/GAPS-AND-DISPUTES.md](./brain/GAPS-AND-DISPUTES.md): where sources disagree + what rocket settles by experiment.
-- Query it: `bash scripts/memory-search.sh "<query>"` (BM25 ranked over `brain/`).
+## MCP server (`rocket-mcp`, 7 tools, stdio)
 
-## The boundary (release engineering ONLY — what rocket hands off)
-- Application/product features, UI, business logic → frontend=`pixel`, backend=`turbo`, mobile=`pebble`.
-- App-level secrets-at-rest / a secrets manager → `hush` (Wave-2). rocket *consumes* secrets (OIDC, `gh secret set`) but doesn't own rotation.
-- Product-side error/crash/uptime monitoring → `canary` (Wave-2). rocket gates on eval scores + deploy liveness, not app exception streams.
-- The database/schema → `acorn`. rocket *plans* the migration ordering (expand-contract); the schema is acorn's.
-- Auth or payments → `badge` / `penny`. rocket wires their deploys; it doesn't configure Clerk or Stripe.
-- The earning loop → `helios`. rocket ships; it doesn't monetize.
+- [tools/rocket/src/mcp-server.ts](./tools/rocket/src/mcp-server.ts): the server. Tools: `rocket_wire`, `rocket_audit`, `rocket_verify`, `rocket_rollback`, `rocket_eval_gate`, `rocket_migrate_plan`, `rocket_preview_reap`, each a thin wrapper over the same core the CLI calls. Long-running calls (`verify`, `eval_gate`) carry the MCP Tasks seam. Hosted OAuth over Streamable HTTP is deferred.
+- [.mcp.json](./.mcp.json): the config any MCP client can copy; it starts the server from GitHub. The development config is `.mcp.dev.json`.
 
-## Packaging surfaces (meta-harness / tool-employee)
-- [.claude-plugin/manifest.json](./.claude-plugin/manifest.json): the plugin (`claude plugin install rocket`) — bundles the CLI + MCP server + 5 skills + 2 hooks + 2 sub-agents.
-- npm publish is **PARKED** (private fleet repo — the bin is built to spec but not published).
+## Skills (each encodes a specific rocket stance)
+
+- [deploy-verify](./skills/deploy-verify/SKILL.md): the both-axes check (SHA compare plus behaviour smoke); the anti-checkmark reflex.
+- [workflow-audit](./skills/workflow-audit/SKILL.md): mutable tags, transitive actions, pwn requests and cache poisoning, with actionlint and zizmor; pin and audit and minimise.
+- [rollback-runbook](./skills/rollback-runbook/SKILL.md): a flag flip beats a redeploy; the "we got popped" runbook (revoke, purge the cache, SHA-pin, rotate).
+- [migration-safety](./skills/migration-safety/SKILL.md): expand-contract; a destructive change ships as a separate deploy 24 to 72 hours after stable.
+- [eval-gate-design](./skills/eval-gate-design/SKILL.md): block on regression, not a floor; the gate is the dataset; two gates; no self-grading.
+
+## Sub-agents (`.claude/agents/`, flat)
+
+- [pipeline-auditor](./.claude/agents/pipeline-auditor.md): the workflow attack-class sweep (mutable tag, pwn request, cache poisoning, OIDC misconfiguration).
+- [deploy-verifier](./.claude/agents/deploy-verifier.md): the both-axes deploy check, answering GO or NO-GO.
+
+## The brain (what rocket knows)
+
+- [brain/MOC - rocket.md](./brain/MOC%20-%20rocket.md): the hub for the brain.
+- [brain/EXPERTISE-MAP.md](./brain/EXPERTISE-MAP.md): the map of mastery by job to be done.
+- [brain/OPINIONS.md](./brain/OPINIONS.md): the taste layer and the three house laws (OP-4 to OP-21).
+- [brain/KNOWN-PITFALLS.md](./brain/KNOWN-PITFALLS.md): version-specific gotchas with detection and fix (P0 to P34).
+- [brain/BATTLE-TESTED-SCENARIOS.md](./brain/BATTLE-TESTED-SCENARIOS.md): 15 real incidents that are the golden eval tasks (G1 to G15).
+- [brain/TOOL-MATRIX.md](./brain/TOOL-MATRIX.md): canonical tools, defaults and alternatives, agent access, required secrets.
+- [brain/GAPS-AND-DISPUTES.md](./brain/GAPS-AND-DISPUTES.md): where sources disagree, and what rocket settles by experiment.
+- Query it: `bash scripts/memory-search.sh "<query>"` (BM25 over `brain/`).
+
+## The boundary (release engineering only)
+
+- Product features, UI and business logic go to pixel (frontend), turbo (backend) and pebble (mobile).
+- Secrets at rest and a secrets manager go to hush; rocket consumes secrets (OIDC, `gh secret set`) but does not own rotation.
+- Product-side error, crash and uptime monitoring go to canary; rocket gates on eval scores and deploy liveness.
+- The database schema goes to acorn; rocket plans the migration ordering (expand-contract).
+- Auth and payments go to badge and penny; rocket wires their deploys. The earning loop goes to helios.
+
+## Install surfaces and self-improvement
+
+- [.claude-plugin/plugin.json](./.claude-plugin/plugin.json): the Claude Code plugin (skills, sub-agents, hooks, MCP server); install with `/plugin marketplace add naman10parikh/rocket`.
+- [.claude-plugin/marketplace.json](./.claude-plugin/marketplace.json): the one-plugin marketplace.
+- [hooks/hooks.json](./hooks/hooks.json): the plugin's two hooks (the house-law guard on Bash, and the session-start house laws).
+- [gemini-extension.json](./gemini-extension.json): the Gemini CLI extension.
+- [workflows/rsi.workflow.js](./workflows/rsi.workflow.js): the deterministic, tokenless nightly loop; it writes a proposal to `proposals/` and never commits.
+- [dsip.json](./dsip.json): the self-improvement contract (eval-gated, no self-grading, git snapback).
+- [eval/run.mjs](./eval/run.mjs): the golden-task pyramid.
+- The CLI is built to spec but npm publishing is parked; install it from GitHub as above.
+
+## Optional
+
+- [SECURITY.md](./SECURITY.md): how to report a vulnerability.
+- [CONTRIBUTING.md](./CONTRIBUTING.md): how to contribute.
+- [LICENSE](./LICENSE): MIT.

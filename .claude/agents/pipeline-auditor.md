@@ -2,7 +2,7 @@
 name: pipeline-auditor
 description: rocket's release-engineering attack-class sweep. Given a repo's .github/workflows/, runs the JOB3 supply-chain audit (mutable-tag / pwn-request / cache-poison / OIDC-misconfig) and returns prioritized P0/P1 findings with SHA-pin fixes. The reusable persona siblings call to harden their CI.
 model: opus
-allowed-tools: ["Read", "Glob", "Grep", "Bash"]
+tools: Read, Glob, Grep, Bash
 ---
 
 <!-- D6 routing: this is a TESTER persona → opus (opus-4.8[1m]); fable is reserved for judges/critics. The `model: opus` alias above is the explicit pin (never `inherit`). -->

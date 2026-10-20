@@ -86,4 +86,4 @@ Sources: https://github.com/anthropics/claude-code-action + https://code.claude.
 - https://www.kinde.com/learn/ai-for-software-engineering/ai-devops/ci-cd-for-evals-running-prompt-and-agent-regression-tests-in-github-actions/
 - https://www.adaline.ai/blog/complete-guide-llm-ai-agent-evaluation-2026 ; https://www.confident-ai.com/knowledge-base/compare/best-ci-cd-tools-testing-ai-agents-before-production-2026
 - https://github.com/anthropics/claude-code-action ; https://code.claude.com/docs/en/github-actions ; https://www.microsoft.com/en-us/security/blog/2026/06/05/securing-ci-cd-in-agentic-world-claude-code-github-action-case/
-- Internal: ~/rocket/dsip.json (rocket's own eval-gated loop)
+- Internal: dsip.json (rocket's own eval-gated loop)

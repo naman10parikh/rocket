@@ -7,7 +7,8 @@
 set -euo pipefail
 
 REPO_DIR="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
-CTX_FILE="$REPO_DIR/.claude/house-laws.context.md"
+# As a plugin, write to the plugin's data dir, never into the user's project.
+CTX_FILE="${CLAUDE_PLUGIN_DATA:-$REPO_DIR/.claude}/house-laws.context.md"
 
 LAWS=$(cat <<'LAWS'
 # rocket — THE 3 HOUSE LAWS (non-negotiable; brain/OPINIONS.md)
@@ -31,7 +32,7 @@ LAWS
 )
 
 # Observable side effect: write the laws to a context file.
-printf '%s\n' "$LAWS" > "$CTX_FILE"
+printf '%s\n' "$LAWS" > "$CTX_FILE" 2>/dev/null || true
 
 # Inject into the session context stream.
 printf '%s\n' "$LAWS"

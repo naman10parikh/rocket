@@ -39,6 +39,16 @@ jobs:
           echo "RSI engine present — running the deterministic half (\$0, tokenless)."
           node workflows/rsi.workflow.js
 
+      # CP158: keep the proposal the engine writes to proposals/ (it was lost with the runner).
+      # A person reviews it; the loop never commits or merges.
+      - name: Upload the proposal for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rsi-proposal
+          path: proposals/rsi-*.md
+          if-no-files-found: warn
+
       - name: Note the deferred Claude half (D8)
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN == '' }}
         run: echo "::notice::Claude RSI half is DARK — set CLAUDE_CODE_OAUTH_TOKEN (CHAIRMAN-CHECKLIST) to light brain-rewrites + new golden tasks + judge-tuning (D8)."

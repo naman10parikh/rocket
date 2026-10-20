@@ -4,6 +4,17 @@
   "private": true,
   "description": "rocket — the Energy fleet's release-engineering employee (deploy + CI/CD). Private fleet repo; not published.",
   "type": "module",
+  "bin": {
+    "rocket": "./tools/rocket/dist/cli.js",
+    "rocket-mcp": "./tools/rocket/dist/mcp-server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "e2b": "^2.30.1"
+  },
   "scripts": {
     "dsip:check": "node tools/dsip-check.mjs dsip.json",
     "dsip:test": "node tools/dsip-check.test.mjs",

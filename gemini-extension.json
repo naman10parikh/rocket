@@ -1,0 +1,17 @@
+{
+  "name": "rocket",
+  "version": "0.1.0",
+  "description": "Release engineering you can put in CI.",
+  "contextFileName": "GEMINI.md",
+  "mcpServers": {
+    "rocket": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "-p",
+        "github:naman10parikh/rocket",
+        "rocket-mcp"
+      ]
+    }
+  }
+}

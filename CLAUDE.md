@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # rocket — Agent-Native Harness (release engineering)
 
 > Forged from Energy via harness-forge (CP103). One repo = one recursively self-improving
@@ -32,6 +34,13 @@ rocket owns the *pipeline and the deploy*, end to end. It does **NOT**:
 ## Dogfood your own taste
 
 This repo has its own `.github/workflows/`. **Run your own audit reflexes on them** — `rocket audit` your own workflows, keep every `uses:` SHA-pinned, honor the one-push-at-a-time law on this repo's own Vercel deploys (if any). The deterministic RSI loop re-audits rocket's own workflows nightly (`brain/GAPS-AND-DISPUTES.md` Part C #5).
+
+## MCP config
+
+The root `.mcp.json` holds only rocket's own server, started from GitHub
+(`npx -y -p github:naman10parikh/rocket rocket-mcp`), so it is safe for anyone who opens this repository or installs
+the plugin. The development config, which runs the committed build at `tools/rocket/dist/mcp-server.js`, lives in
+`.mcp.dev.json`; load it with `claude --mcp-config .mcp.dev.json`.
 
 ## Operating model
 

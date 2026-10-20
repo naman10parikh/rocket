@@ -4,7 +4,8 @@
 # AND is directly invocable with a simulated PreToolUse payload on stdin so its fired
 # side effect is git-verifiable WITHOUT a live session (the MASTER-TODOS B4 verify contract).
 #
-# Hook contract (Claude Code PreToolUse): reads JSON {tool, tool_input} on stdin.
+# Hook contract (Claude Code PreToolUse): reads JSON {tool_name, tool_input} on stdin
+# (the older simulated {tool, tool_input} payload is still accepted).
 #   - BLOCK  -> exit 2, reason on stderr (Claude Code surfaces stderr + halts the call)
 #   - WARN   -> exit 0, message on stderr (advisory; the call proceeds)
 #   - ALLOW  -> exit 0, silent
@@ -25,7 +26,7 @@ try:
 except Exception:
     print(" ")
     sys.exit(0)
-tool = d.get("tool", "")
+tool = d.get("tool_name") or d.get("tool", "")  # Claude Code sends tool_name; "tool" is the old test shape
 ti = d.get("tool_input", {}) or {}
 cmd = ti.get("command", "") if isinstance(ti, dict) else ""
 # single-line, tab-free so the shell read splits tool vs command cleanly

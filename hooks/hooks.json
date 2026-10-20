@@ -1,0 +1,26 @@
+{
+  "description": "rocket's house laws: block a manual vercel --prod and warn on a direct push to main before a Bash command runs, and load the three house laws at session start.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/.claude/hooks/house-law-guard.sh\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/.claude/hooks/inject-house-laws.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

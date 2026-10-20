@@ -21,6 +21,9 @@ Every verb is reachable via **CLI AND rocket's MCP server** — an agent never h
 
 ### CLI (`tools/rocket/dist/cli.js`; `#!/usr/bin/env node`, `--json` on every read path)
 
+Run it without cloning: `npx -y -p github:naman10parikh/rocket rocket <command>` (the root `package.json` exposes the
+committed build as the `rocket` and `rocket-mcp` bins). Inside a clone: `node tools/rocket/dist/cli.js <command>`.
+
 ```
 rocket wire    --target <repo> [--lane vercel|fly|cloudflare|railway] [--strategy bluegreen|canary] [--dry-run] [--json]
 rocket audit   <path-to-.github/workflows | repo> [--json]
@@ -36,6 +39,9 @@ rocket --help | --version
 Contract: one verb per concept (`get` not `info`); exit 0 (clean) / non-zero (finding / NO-GO / refusal / error); `--json` everywhere on read paths (agents are the primary customer — OP-19). The web-touching path (`verify` curling a live preview URL) uses `bb`/Stagehand or `playwright-cli` via Bash — **Playwright MCP is banned**.
 
 ### MCP server (stdio; tools mirror the CLI 1:1)
+
+Start it with `npx -y -p github:naman10parikh/rocket rocket-mcp`; the root `.mcp.json` wires exactly that, and
+`.mcp.dev.json` runs the committed build (`node tools/rocket/dist/mcp-server.js`). Tools:
 
 `rocket_wire` · `rocket_audit` · `rocket_verify` · `rocket_rollback` · `rocket_eval_gate` · `rocket_migrate_plan` · `rocket_preview_reap`. Long-running calls (`verify`, `eval_gate`) use the MCP Tasks primitive (call-now/fetch-later).
 

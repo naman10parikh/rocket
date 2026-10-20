@@ -1,9 +1,8 @@
 {
   "mcpServers": {
     "rocket": {
-      "command": "node",
-      "args": ["tools/rocket/dist/mcp-server.js"],
-      "env": {}
+      "command": "npx",
+      "args": ["-y", "-p", "github:naman10parikh/rocket", "rocket-mcp"]
     }
   }
 }
