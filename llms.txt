@@ -28,7 +28,7 @@ Run it from GitHub with no clone: `npx -y -p github:naman10parikh/rocket rocket 
 
 ## CLI (`rocket`; `--json` on every read path; exit 0 when clean, non-zero on a finding, a NO-GO or a refusal)
 
-- [wire](./tools/rocket/src/commands/wire.ts): `rocket wire --target <repo> [--lane vercel|fly|cloudflare|railway] [--strategy bluegreen|canary] [--dry-run]` is the acceptance test: an actionlint-clean workflow and deploy config, committed.
+- [wire](./tools/rocket/src/commands/wire.ts): `rocket wire --target <repo> [--lane vercel] [--strategy bluegreen|canary] [--dry-run]` is the acceptance test: an actionlint-clean workflow and Vercel deploy config, ready for you to commit. The Fly, Cloudflare and Railway lanes are planned.
 - [audit](./tools/rocket/src/commands/audit.ts): `rocket audit <workflows dir or repo>` sweeps the attack classes with actionlint and zizmor and gives P0 and P1 findings with SHA-pin fixes.
 - [verify](./tools/rocket/src/commands/verify.ts): `rocket verify --target <repo|url> [--sha <expected>]` checks both axes (the deployed SHA equals HEAD, and a behaviour smoke test passes) and answers GO or NO-GO.
 - [rollback](./tools/rocket/src/commands/rollback.ts): `rocket rollback --target <repo> [--to <deployment|image>]` runs the rollback hierarchy fastest first (flag, alias repoint, image pin, git revert).

@@ -124,7 +124,7 @@ workflow generator.
 
 | Command | MCP tool | What it does |
 | --- | --- | --- |
-| `rocket wire --target <repo> [--lane vercel\|fly\|cloudflare\|railway] [--dry-run]` | `rocket_wire` | Generates an actionlint-clean workflow and deploy config and commits it. This is the acceptance test. |
+| `rocket wire --target <repo> [--lane vercel] [--dry-run]` | `rocket_wire` | Generates an actionlint-clean workflow and Vercel deploy config, and names the two files for you to commit. The Fly, Cloudflare and Railway lanes are planned. This is the acceptance test. |
 | `rocket audit <workflows dir or repo>` | `rocket_audit` | Sweeps the supply-chain attack classes with actionlint and zizmor; P0 and P1 findings with SHA-pin fixes. |
 | `rocket verify --target <repo\|url> [--sha <expected>]` | `rocket_verify` | The both-axes check: deployed SHA equals HEAD, and a behaviour smoke test passes. Answers GO or NO-GO. |
 | `rocket rollback --target <repo> [--to <deployment\|image>]` | `rocket_rollback` | The rollback hierarchy, fastest first: flag, alias repoint, image pin, git revert. |

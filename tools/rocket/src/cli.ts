@@ -60,7 +60,7 @@ program
   .command("wire")
   .description("generate a valid, actionlint-clean GHA workflow + deploy config for <target>; this is THE acceptance test")
   .requiredOption("--target <repo>", "the target repo path")
-  .option("--lane <lane>", "deploy lane: vercel|fly|cloudflare|railway (default vercel, RQ1)")
+  .option("--lane <lane>", "deploy lane: vercel (default, RQ1); fly, cloudflare and railway are planned")
   .option("--strategy <strategy>", "deploy strategy: bluegreen|canary (default bluegreen, HOUSE LAW 1)")
   .option("--dry-run", "print the ordered step plan with verify gates; no side effects")
   .option("--json", "machine-readable JSON output")

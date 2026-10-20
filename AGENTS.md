@@ -25,7 +25,7 @@ Run it without cloning: `npx -y -p github:naman10parikh/rocket rocket <command>`
 committed build as the `rocket` and `rocket-mcp` bins). Inside a clone: `node tools/rocket/dist/cli.js <command>`.
 
 ```
-rocket wire    --target <repo> [--lane vercel|fly|cloudflare|railway] [--strategy bluegreen|canary] [--dry-run] [--json]
+rocket wire    --target <repo> [--lane vercel] [--strategy bluegreen|canary] [--dry-run] [--json]
 rocket audit   <path-to-.github/workflows | repo> [--json]
 rocket verify  --target <repo|url> [--sha <expected>] [--json]
 rocket rollback --target <repo> [--to <deployment-id|image>] [--json]

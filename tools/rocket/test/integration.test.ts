@@ -48,6 +48,25 @@ test("integration: rocket wire generates a workflow file that lands AND is actio
   }
 });
 
+// ── wire refuses a lane it cannot generate yet, and writes nothing ──────────────
+test("integration: rocket wire refuses the fly, cloudflare and railway lanes and writes nothing", () => {
+  for (const lane of ["fly", "cloudflare", "railway"] as const) {
+    const dir = mkdtempSync(join(tmpdir(), "rocket-wire-lane-"));
+    try {
+      writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x", dependencies: { next: "15.0.0" } }));
+      for (const dryRun of [true, false]) {
+        const r = runWire({ target: dir, lane, strategy: "bluegreen", dryRun });
+        assert.equal(r.ok, false, `${lane} must not report success (dryRun=${dryRun})`);
+        assert.match(r.summary, /only the vercel lane/i);
+      }
+      assert.equal(existsSync(join(dir, "vercel.json")), false, `${lane} must not write a vercel.json`);
+      assert.equal(existsSync(join(dir, ".github")), false, `${lane} must not write a workflow`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
+
 // ── wire's own output passes rocket's own audit (every action SHA-pinned) ─────
 test("integration: rocket audit finds nothing in the workflow rocket wire generates (npm and pnpm)", () => {
   for (const lockfile of [null, "pnpm-lock.yaml"]) {

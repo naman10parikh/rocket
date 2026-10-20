@@ -29,6 +29,12 @@ export function runWire(opts: WireOptions): CommandResult {
   const lane: Lane = opts.lane ?? "vercel";
   const strategy: Strategy = opts.strategy ?? "bluegreen";
 
+  // Only the Vercel lane is generated today: the workflow and vercel.json are Vercel's. Fly, Cloudflare and Railway
+  // configs are planned, so those lanes stop here and write nothing rather than hand back a Vercel deploy.
+  if (lane !== "vercel") {
+    return errorResult("wire", `only the vercel lane is generated today; --lane ${lane} is planned, so nothing was written.`);
+  }
+
   // dry-run prints the plan WITHOUT requiring the target to exist or writing anything (the D1 verify path).
   if (opts.dryRun) {
     const steps = wirePlan({ lane, strategy });
